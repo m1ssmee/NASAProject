@@ -9,6 +9,7 @@ import { startScroll, stopScroll } from '@/engine';
 import { formatDec, formatRa } from '@/lib/astro';
 import { FOV_MAX, FOV_MIN, pan, toScreen, toSky, type View } from '@/sky/project';
 import type { Sky } from '@/sky/scene';
+import { OPEN_FULL_SKY } from './FullSkyLink';
 import { Hop } from './Hop';
 
 export interface FreshField { ra: number; dec: number; date: string; count: number }
@@ -205,11 +206,15 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && fullRef.current && !pickRef.current) setFull(false); };
+    // Buttons elsewhere on the page can ask for full screen.
+    const onOpen = () => setFull(true);
     document.addEventListener('fullscreenchange', onFs);
     addEventListener('keydown', onEsc);
+    addEventListener(OPEN_FULL_SKY, onOpen);
     return () => {
       document.removeEventListener('fullscreenchange', onFs);
       removeEventListener('keydown', onEsc);
+      removeEventListener(OPEN_FULL_SKY, onOpen);
       // Leaving the page (for the viewer, say): give the window back.
       if (fullRef.current) {
         fullRef.current = false;

@@ -4,6 +4,7 @@ import { HeroPlate } from '@/components/HeroPlate';
 import { Hop } from '@/components/Hop';
 import { Ruler } from '@/components/Ruler';
 import { FreshStrip, type FreshData } from '@/components/FreshStrip';
+import { FullSkyLink } from '@/components/FullSkyLink';
 import { Seek } from '@/components/Seek';
 import { SkyMap } from '@/components/SkyMap';
 import { notedStars, viewerHref } from '@/data/stars';
@@ -120,7 +121,7 @@ export default function Home() {
             SPHEREx has no filter wheel. Each of its six detectors sits behind a filter that changes colour along its length, so where a star lands decides which wavelength gets recorded. The viewer stacks every exposure from one detector and one pass into a clean plate, and can turn the whole set into a spectrum while you wait.
           </p>
           <p style={{ marginTop: '2rem' }}>
-            <Link href="/view" className="btn"><Hop tick={false}>Blink your own patch of sky</Hop></Link>
+            <FullSkyLink>Blink your own patch of sky</FullSkyLink>
           </p>
         </div>
         <div className="bands__ruler" data-reveal="clip">
