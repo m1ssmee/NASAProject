@@ -581,3 +581,18 @@ html.intro-veil #twinkle { opacity: 1; visibility: visible; transition: none; }
 html.intro-veil #twinkle i { animation: twinkle 1.5s ease-in-out infinite; }
 html.intro-veil #twinkle i:nth-child(2) { animation-duration: 1.1s; animation-delay: -0.4s; }
 html.intro-veil #twinkle i:nth-child(3) { animation-duration: 1.9s; animation-delay: -0.9s; }
+
+/* ───────── Sky map, full screen ───────── */
+.sky__tools .sky__fullbtn { grid-column: 1 / -1; width: auto; display: flex; align-items: center; justify-content: center; gap: 0.45rem; border-right: 0; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; }
+.sky__fullbtn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.sky__tools button:nth-child(2n) { border-right: 1px solid rgb(231 233 230 / 0.25); }
+.sky__tools button:nth-child(2n + 1):not(.sky__fullbtn) { border-right: 0; }
+.sky__layer { transition: opacity 0.6s ease; }
+.sky[data-filling] .sky__layer { opacity: 0; }
+html.sky-full { overflow: hidden; }
+html.sky-full #main { z-index: 60; }
+html.sky-full .sky { position: fixed; inset: 0; height: 100dvh; min-height: 0; z-index: 10; border: 0; background-image: none; }
+html.sky-full .sky__tools { top: var(--gutter); }
+.sky__hint { position: absolute; left: var(--gutter); bottom: 1.25rem; right: var(--gutter); z-index: 2; pointer-events: none; font-size: var(--t-s); color: var(--c-muted); text-shadow: 0 0 8px var(--emulsion); }
+.sky[data-filling] .sky__hint { opacity: 0; }
+@media (max-width: 640px) { .sky__fullbtn span { display: none; } }

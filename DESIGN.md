@@ -128,3 +128,11 @@ happens, so a failed 3D load cannot leave the page dark.
 
 This is well past the 2.6 s the skill recommends for an opening, and the site is not visible
 until it ends. That is a deliberate choice by the owner for the hackathon presentation.
+
+## Revision 4: full-screen map
+
+A "Full screen" button heads the map controls. The window goes black, the stars come up brightest
+first (the same fill as the opening), and the whole window is the map: every star with a note and
+every other point works as before, including "Blink". The browser is also asked for real full
+screen where it allows it. Escape or the same button leaves; leaving for the viewer restores the
+page. Under reduced motion the switch is instant.

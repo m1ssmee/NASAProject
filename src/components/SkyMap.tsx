@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { notedStars, viewerHref, type NotedStar } from '@/data/stars';
+import { startScroll, stopScroll } from '@/engine';
 import { formatDec, formatRa } from '@/lib/astro';
 import { FOV_MAX, FOV_MIN, pan, toScreen, toSky, type View } from '@/sky/project';
 import type { Sky } from '@/sky/scene';
@@ -33,6 +34,9 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const [pick, setPickState] = useState<Pick | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'nogl'>('loading');
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [full, setFullState] = useState(false);
+  const fullRef = useRef(false);
+  const fillTween = useRef<gsap.core.Tween | null>(null);
 
   const setPick = useCallback((p: Pick | null) => { pickRef.current = p; setPickState(p); dirty.current = true; }, []);
   const hold = () => { if (closeTimer.current) clearTimeout(closeTimer.current); closeTimer.current = null; };
@@ -155,6 +159,57 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       sky.current = null;
     };
   }, []);
+
+  // Full screen: the screen goes black, the stars come up, and the whole window is the map.
+  const setFull = useCallback((next: boolean) => {
+    if (fullRef.current === next) return;
+    fullRef.current = next;
+    setFullState(next);
+    setPick(null);
+    const html = document.documentElement;
+    html.classList.toggle('sky-full', next);
+    fillTween.current?.kill();
+    const s = sky.current, el = host.current;
+    if (next) {
+      stopScroll();
+      // Ask the browser for real full screen too; where that is refused the map still fills the window.
+      html.requestFullscreen?.().catch(() => {});
+      if (s && el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const f = { v: 0 };
+        s.setFill(0);
+        el.dataset.filling = '';
+        fillTween.current = gsap.to(f, {
+          v: 1, duration: 1.8, delay: 0.5, ease: 'power2.in',
+          onUpdate: () => s.setFill(f.v),
+          onComplete: () => { delete el.dataset.filling; },
+        });
+      }
+    } else {
+      startScroll();
+      s?.setFill(1);
+      if (el) delete el.dataset.filling;
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    }
+    touched.current = gsap.ticker.time;
+    dirty.current = true;
+  }, [setPick]);
+  useEffect(() => {
+    const onFs = () => { if (!document.fullscreenElement) setFull(false); };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && fullRef.current && !pickRef.current) setFull(false); };
+    document.addEventListener('fullscreenchange', onFs);
+    addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs);
+      removeEventListener('keydown', onEsc);
+      // Leaving the page (for the viewer, say): give the window back.
+      if (fullRef.current) {
+        fullRef.current = false;
+        document.documentElement.classList.remove('sky-full');
+        startScroll();
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [setFull]);
 
   // Pointer: drag turns the sky; a click without a drag picks.
   const drag = useRef<{ x: number; y: number; moved: number; id: number } | null>(null);
@@ -304,6 +359,14 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       )}
 
       <div className="sky__tools" role="group" aria-label="Map controls">
+        <button type="button" className="sky__fullbtn" onClick={() => setFull(!full)} aria-pressed={full} aria-label={full ? 'Leave full screen' : 'Full screen'}>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            {full
+              ? <path d="M6 1v5H1M10 1v5h5M6 15v-5H1M10 15v-5h5" />
+              : <path d="M1 6V1h5M15 6V1h-5M1 10v5h5M15 10v5h-5" />}
+          </svg>
+          <span>{full ? 'Exit' : 'Full screen'}</span>
+        </button>
         <button type="button" onClick={() => nudge(0, 0, 0.75)} aria-label="Zoom in">+</button>
         <button type="button" onClick={() => nudge(0, 0, 1.33)} aria-label="Zoom out">&minus;</button>
         <button type="button" onClick={() => nudge(1, 0)} aria-label="Turn east">&larr;</button>
@@ -311,6 +374,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         <button type="button" onClick={() => nudge(0, 1)} aria-label="Turn north">&uarr;</button>
         <button type="button" onClick={() => nudge(0, -1)} aria-label="Turn south">&darr;</button>
       </div>
+      {full && <p className="sky__hint">Click any star, or any spot, to see its coordinates and blink it. Esc leaves full screen.</p>}
       {state === 'nogl' && <p className="sky__fallback">This is a still picture of the sky: the live map needs WebGL, which this browser has switched off. The search box and the list of stars below work without it.</p>}
     </div>
   );
