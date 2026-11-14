@@ -42,6 +42,7 @@ export default function Method() {
           <div className="method__v prose">
             <p>A SPHEREx detector sits behind a filter whose colour changes from one edge to the other. The same star lands on a different part of that filter in each exposure, so each exposure records it at a different wavelength. Blink them raw and a brown dwarf flickers with its own spectrum, which hides the motion you are looking for.</p>
             <p>Stacking a whole pass averages across the detector&rsquo;s wavelength range. The viewer also offers burst mode, which groups exposures taken minutes apart, for asteroids and comets that move too fast for a pass stack, and single mode for inspecting one exposure.</p>
+            <p>Colour plates combine three detectors: 1.1 to 1.6 microns as blue, 2.4 to 3.8 as green and 4.4 to 5.0 as red. These are not colours an eye could see. They show which objects are brighter at long wavelengths, which is where cold things such as brown dwarfs give themselves away.</p>
             <p>The spectrum panel uses the same property the other way round: it measures the source in every exposure and plots brightness against the wavelength each one happened to sample.</p>
           </div>
         </div>

@@ -49,6 +49,10 @@ export interface Epoch {
   frames: Frame[];
   waveMin: number;
   waveMax: number;
+  /** Colour plates only: one stacked image per colour channel (blue, green, red), null where a detector has no exposures. */
+  rgb?: (Float32Array | null)[];
+  /** Colour plates only: detectors with no exposures in this pass. */
+  missing?: number[];
 }
 
 export type Mode = 'pass' | 'burst' | 'single';
@@ -343,4 +347,47 @@ export function thin<T>(items: T[], max: number): T[] {
   const out: T[] = [];
   for (let i = 0; i < max; i++) out.push(items[Math.floor((i * items.length) / max)]);
   return out;
+}
+
+/**
+ * Detectors used for colour plates, as blue, green, red: short, middle and long wavelength.
+ * A cold object such as a brown dwarf is faint in the first and bright in the last, so it comes
+ * out red; ordinary stars come out white to blue.
+ */
+export const COLOUR_DETS = [2, 4, 6] as const;
+
+/**
+ * Colour plates: frames from three detectors grouped into survey passes, each pass stacked per
+ * detector. The detectors see a position at slightly different times, so anything that moves
+ * within a pass shows as separated coloured dots.
+ */
+export function buildColourEpochs(frames: Frame[], dets: readonly number[] = COLOUR_DETS): Epoch[] {
+  // Passes are found from all frames together, so the three channels share the same epochs.
+  const sorted = [...frames].sort((a, b) => a.mjd - b.mjd);
+  const groups: Frame[][] = [];
+  for (const f of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && f.mjd - last[last.length - 1].mjd <= PASS_GAP_DAYS && f.mjd - last[0].mjd <= PASS_MAX_DAYS) last.push(f);
+    else groups.push([f]);
+  }
+  return groups.map((g) => {
+    const rgb = dets.map((d) => {
+      const mine = g.filter((f) => f.rec.det === d);
+      return mine.length ? combine(mine) : null;
+    });
+    const waves = g.map((f) => f.wave).filter(Number.isFinite);
+    return {
+      key: `rgb:${g[0].rec.id}:${g.length}`,
+      mode: 'pass' as Mode,
+      mjd: g.reduce((sum, f) => sum + f.mjd, 0) / g.length,
+      mjdMin: g[0].mjd,
+      mjdMax: g[g.length - 1].mjd,
+      data: rgb[2] ?? rgb[1] ?? rgb[0] ?? g[0].data,
+      frames: g,
+      waveMin: Math.min(...waves),
+      waveMax: Math.max(...waves),
+      rgb,
+      missing: dets.filter((_, i) => !rgb[i]),
+    };
+  }).filter((e) => e.rgb.filter(Boolean).length >= 2); // a colour plate needs at least two channels
 }

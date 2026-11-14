@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatDec, formatRa, parseCoords, propagate } from '../src/lib/astro';
 import { parseHeader } from '../src/lib/fits';
-import { buildEpochs, makeGrid, parseSia, wavelengthAt, type Frame } from '../src/lib/frames';
+import { buildColourEpochs, buildEpochs, makeGrid, parseSia, wavelengthAt, type Frame } from '../src/lib/frames';
 import { deproject, makeWcs, pixToSky, project, skyToPix } from '../src/lib/wcs';
 
 const card = (k: string, v: string) => `${k.padEnd(8)}= ${v}`.padEnd(80);
@@ -110,6 +110,16 @@ describe('frames', () => {
     expect(buildEpochs(frames, 'pass').map((e) => e.frames.length)).toEqual([4, 2]);
     expect(buildEpochs(frames, 'burst').map((e) => e.frames.length)).toEqual([3, 1, 2]);
     expect(buildEpochs(frames, 'single')).toHaveLength(6);
+  });
+  it('builds colour plates per pass and reports a missing detector', () => {
+    const f = (mjd: number, det: number, v: number): Frame => ({ rec: { id: `${mjd}-${det}`, det, mjd, key: '', rel: '' }, mjd, data: new Float32Array([v]), background: 0, sigma: 1, wave: det, bandwidth: 0.02, pixel: [0, 0], psfFwhm: 7, exposure: 113, coverage: 1 });
+    const frames = [f(60800, 2, 1), f(60801, 4, 2), f(60802, 6, 3), f(60990, 2, 4), f(60991, 6, 6), f(61200, 4, 9)];
+    const e = buildColourEpochs(frames);
+    expect(e).toHaveLength(2); // the third pass has one detector only and is dropped
+    expect(e[0].rgb!.map((c) => c && c[0])).toEqual([1, 2, 3]);
+    expect(e[0].missing).toEqual([]);
+    expect(e[1].rgb![1]).toBeNull();
+    expect(e[1].missing).toEqual([4]);
   });
   it('sizes the grid at half a detector pixel', () => {
     const g = makeGrid(10, 10, 300);

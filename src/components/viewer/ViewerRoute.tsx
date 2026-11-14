@@ -51,7 +51,7 @@ export function ViewerRoute({ query, embed = false }: { query: Query; embed?: bo
     fov: FOVS.includes(fov) ? fov : 300,
     det: det >= 1 && det <= 6 ? Math.round(det) : 3,
     mode: (['pass', 'burst', 'single'].includes(mode ?? '') ? mode : 'pass') as Mode,
-    diff: sp.get('diff') === '1', gaia: sp.get('gaia') === '1', ends: sp.get('ends') === '1',
+    diff: sp.get('diff') === '1', gaia: sp.get('gaia') === '1', ends: sp.get('ends') === '1', colour: sp.get('rgb') === '1',
     // Never faster than 3 swaps a second.
     hold: hold >= 340 && hold <= 2000 ? hold : 700,
   };

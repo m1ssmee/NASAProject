@@ -178,3 +178,14 @@ is in `src/data/media.ts`; every video id was checked against YouTube.
   in the NASA image library.
 - "Stars with notes" shows eight with a button for the rest. The footer lists the official
   mission sites.
+
+## Revision 9: colour plates
+
+A "Colour" switch in the viewer loads three detectors and paints them blue (D2, 1.1 to 1.6 um),
+green (D4, 2.4 to 3.8) and red (D6, 4.4 to 5.0), each stretched against its own sky noise. Cold
+objects come out red; ordinary stars white to blue. Colour plates are always one per survey pass
+and always light on dark, like NASA's composites. Subtraction and the other grouping modes are
+single-detector tools and are disabled while colour is on. A pass with no exposures from one
+detector fills that channel with the average of the other two and says so on the plate; a pixel
+with no data in any channel is grey. Off by default: it loads about three times as much.
+URL parameter `rgb=1`; key C.

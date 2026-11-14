@@ -731,3 +731,11 @@ html.sky-full .sky__tools { top: var(--gutter); }
 .seen__item figcaption i { font-style: normal; font-family: var(--f-mono); font-size: var(--t-xs); color: var(--c-muted); }
 @media (max-width: 760px) { .seen__item--1, .seen__item--2, .seen__item--3, .seen__item--4 { grid-column: 1 / -1; } .seen__item a { aspect-ratio: 16 / 10 !important; } }
 .site-footer__col { grid-column: span 4; }
+
+/* Viewer: colour mode legend */
+.swatch { display: inline-block; width: 0.7em; height: 0.7em; margin-right: 0.3em; border: 1px solid var(--c-fg); vertical-align: baseline; }
+.swatch--b { background: #4f7dff; }
+.swatch--g { background: #36c46a; }
+.swatch--r { background: #ff4a3d; }
+.seg button[disabled] { opacity: 0.4; cursor: default; }
+.check:has(input[disabled]) { opacity: 0.5; cursor: default; }

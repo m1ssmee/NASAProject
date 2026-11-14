@@ -38,3 +38,44 @@ export function subtract(a: Float32Array, b: Float32Array): Float32Array {
   for (let i = 0; i < a.length; i++) out[i] = a[i] - b[i];
   return out;
 }
+
+/**
+ * Paint three stacked images as one colour plate: channels[0] blue, [1] green, [2] red, each
+ * stretched against its own limits so the sky is neutral. Colour plates are always light on
+ * dark, the way NASA's composites are.
+ */
+export function paintRgb(
+  canvas: HTMLCanvasElement, channels: (Float32Array | null)[], n: number, limits: (Limits | null)[], gain = 1,
+) {
+  if (canvas.width !== n) { canvas.width = n; canvas.height = n; }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const img = ctx.createImageData(n, n);
+  const px = img.data;
+  const ls = limits.map((l) => (l && gain !== 1 ? { ...l, hi: l.lo + (l.hi - l.lo) / gain } : l));
+  const [b, g, r] = channels;
+  const level = (c: Float32Array | null, l: Limits | null, i: number) => {
+    if (!c || !l) return 0;
+    const v = c[i];
+    return Number.isFinite(v) ? stretch(v, l) : -1;
+  };
+  for (let i = 0; i < n * n; i++) {
+    let R = level(r, ls[2], i), G = level(g, ls[1], i), B = level(b, ls[0], i);
+    // A detector with no exposures in this pass: stand in the average of the other two, so the
+    // plate stays neutral instead of taking on a colour cast. The viewer says which one is missing.
+    if (!r) R = (Math.max(0, G) + Math.max(0, B)) / 2;
+    if (!g) G = (Math.max(0, R) + Math.max(0, B)) / 2;
+    if (!b) B = (Math.max(0, R) + Math.max(0, G)) / 2;
+    const o = i * 4;
+    // No data in any one channel (usually a star that overflowed that detector): grey, as on the
+    // single-detector plates. Showing the surviving channels alone would invent a vivid colour.
+    if (R < 0 || G < 0 || B < 0) { px[o] = 58; px[o + 1] = 60; px[o + 2] = 64; }
+    else {
+      px[o] = 16 + 239 * Math.max(0, R);
+      px[o + 1] = 18 + 237 * Math.max(0, G);
+      px[o + 2] = 20 + 235 * Math.max(0, B);
+    }
+    px[o + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}

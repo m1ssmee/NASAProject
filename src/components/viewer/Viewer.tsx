@@ -8,17 +8,17 @@ import { Ruler } from '@/components/Ruler';
 import { Seek } from '@/components/Seek';
 import { formatDec, formatRa, isoDate, mjdToYear, propagate } from '@/lib/astro';
 import {
-  aperture, buildEpochs, DETECTORS, displayLimits, loadFrame, makeGrid, pool, thin,
+  aperture, buildColourEpochs, buildEpochs, COLOUR_DETS, DETECTORS, displayLimits, loadFrame, makeGrid, pool, thin,
   type Epoch, type Frame, type ImageRecord, type Mode,
 } from '@/lib/frames';
-import { paint, subtract } from '@/lib/render';
+import { paint, paintRgb, subtract } from '@/lib/render';
 import { useTone } from '@/lib/tone';
 import { deproject, project } from '@/lib/wcs';
 import { Spectrum, type SpecPoint } from './Spectrum';
 
 export interface ViewParams {
   ra: number; dec: number; name?: string;
-  fov: number; det: number; mode: Mode; diff: boolean; gaia: boolean; hold: number; ends: boolean;
+  fov: number; det: number; mode: Mode; diff: boolean; gaia: boolean; hold: number; ends: boolean; colour: boolean;
 }
 
 interface GaiaSource { id: string; ra: number; dec: number; pmRa: number; pmDec: number; g: number | null }
@@ -35,7 +35,10 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
   const [fov, setFovRaw] = useState(initial.fov);
   const [det, setDetRaw] = useState(initial.det);
   const [mode, setMode] = useState<Mode>(initial.mode);
-  const [diff, setDiff] = useState(initial.diff);
+  const [diffWanted, setDiff] = useState(initial.diff);
+  const [colour, setColourRaw] = useState(initial.colour);
+  // Subtraction is a single-detector tool; colour plates are for seeing what things are.
+  const diff = diffWanted && !colour;
   const [ends, setEnds] = useState(initial.ends);
   const [showGaia, setShowGaia] = useState(initial.gaia);
   const [hold, setHold] = useState(initial.hold);
@@ -57,12 +60,13 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
   const canvas = useRef<HTMLCanvasElement>(null);
   const tone = useTone();
   const grid = useMemo(() => makeGrid(ra, dec, fov), [ra, dec, fov]);
-  const loadKey = `${det}:${fov}`;
+  const loadKey = `${colour ? 'rgb' : det}:${fov}`;
   const current = load && load.key === loadKey ? load : null;
   const frames = useMemo(() => current?.frames ?? [], [current]);
   const progress = { done: current?.done ?? 0, total: current?.total ?? 0, failed: current?.failed ?? 0 };
   const gaia = gaiaData && gaiaData.fov === fov ? gaiaData.sources : null;
-  const setDet = useCallback((d: number) => { setDetRaw(d); setIdx(0); setMark(null); }, []);
+  const setDet = useCallback((d: number) => { setDetRaw(d); setColourRaw(false); setIdx(0); setMark(null); }, []);
+  const setColour = useCallback((on: boolean) => { setColourRaw(on); setIdx(0); }, []);
   const setFov = (f: number) => { setFovRaw(f); setIdx(0); setMark(null); };
 
   // 1. Which exposures cover this position?
@@ -96,7 +100,10 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
   useEffect(() => {
     if (!records) return;
     const ac = new AbortController();
-    const mine = thin(records.filter((r) => r.det === det), fov >= 600 ? 48 : 120);
+    // Colour needs three detectors, so each gets fewer exposures to keep the wait reasonable.
+    const wanted: readonly number[] = colour ? COLOUR_DETS : [det];
+    const each = fov >= 600 ? (colour ? 24 : 48) : colour ? 60 : 120;
+    const mine = wanted.flatMap((d) => thin(records.filter((r) => r.det === d), each));
     const got: Frame[] = [];
     let done = 0, failed = 0, last = 0;
     const flush = (force = false) => {
@@ -116,9 +123,20 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setPlaying(true);
     });
     return () => ac.abort();
-  }, [records, det, grid, fov, loadKey]);
+  }, [records, det, grid, fov, loadKey, colour]);
 
-  const epochs: Epoch[] = useMemo(() => (frames.length ? buildEpochs(frames, mode) : []), [frames, mode]);
+  const epochs: Epoch[] = useMemo(
+    () => (frames.length ? (colour ? buildColourEpochs(frames) : buildEpochs(frames, mode)) : []),
+    [frames, mode, colour],
+  );
+  // Each colour channel gets its own limits, taken from the pass with the most exposures in it.
+  const rgbLimits = useMemo(() => {
+    if (!colour) return null;
+    return [0, 1, 2].map((c) => {
+      const imgs = epochs.map((e) => e.rgb?.[c]).filter((x): x is Float32Array => !!x);
+      return imgs.length ? displayLimits(imgs) : null;
+    });
+  }, [epochs, colour]);
   // Display limits come from the deepest plate, so a thin plate looks as noisy as it is.
   const limits = useMemo(() => {
     const deepest = epochs.reduce<Epoch | null>((best, e) => (!best || e.frames.length > best.frames.length ? e : best), null);
@@ -154,11 +172,12 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
   // 4. Paint.
   useEffect(() => {
     if (!canvas.current || !epoch) return;
+    if (colour && epoch.rgb && rgbLimits) { paintRgb(canvas.current, epoch.rgb, grid.n, rgbLimits, gain); return; }
     if (diff && epochs.length > 1) {
       const ref = cur === 0 ? epochs[epochs.length - 1] : epochs[0];
       paint(canvas.current, cur === 0 ? subtract(ref.data, epoch.data) : subtract(epoch.data, ref.data), grid.n, limits, tone, true, gain);
     } else paint(canvas.current, epoch.data, grid.n, limits, tone, false, gain);
-  }, [epoch, epochs, cur, diff, limits, tone, gain, grid.n]);
+  }, [epoch, epochs, cur, diff, limits, tone, gain, grid.n, colour, rgbLimits]);
 
   // Keyboard: space, arrows, 1 to 6, D.
   useEffect(() => {
@@ -170,6 +189,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
       else if (e.key === 'ArrowLeft') { setPlaying(false); step(-1); }
       else if (/^[1-6]$/.test(e.key)) setDet(Number(e.key));
       else if (e.key.toLowerCase() === 'd') setDiff((d) => !d);
+      else if (e.key.toLowerCase() === 'c') setColourRaw((c) => !c);
     };
     addEventListener('keydown', key);
     return () => removeEventListener('keydown', key);
@@ -180,11 +200,12 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
     const q = new URLSearchParams({ ra: ra.toFixed(5), dec: dec.toFixed(5), fov: String(fov), det: String(det), mode });
     if (name) q.set('name', name);
     if (diff) q.set('diff', '1');
+    if (colour) q.set('rgb', '1');
     if (ends) q.set('ends', '1');
     if (showGaia) q.set('gaia', '1');
     if (hold !== 700) q.set('hold', String(hold));
     return q.toString();
-  }, [ra, dec, fov, det, mode, name, diff, ends, showGaia, hold]);
+  }, [ra, dec, fov, det, mode, name, diff, ends, showGaia, hold, colour]);
   useEffect(() => { history.replaceState(history.state, '', `${location.pathname}?${query}`); }, [query]);
 
   // Gaia DR3 overlay.
@@ -312,7 +333,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
           {epoch && (
             <div className="plate__edge" aria-hidden="true">
               <span><b>{cur + 1}/{epochs.length}</b> {label}</span>
-              <span>{epoch.frames.length} exp, {epoch.waveMin.toFixed(2)} to {epoch.waveMax.toFixed(2)} µm</span>
+              <span>{epoch.missing?.length ? `no D${epoch.missing.join(', D')} in this pass, ` : ''}{epoch.frames.length} exp, {epoch.waveMin.toFixed(2)} to {epoch.waveMax.toFixed(2)} µm</span>
             </div>
           )}
         </div>
@@ -353,16 +374,22 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
 
         <section className="panel" aria-label="Detector">
           <h2 className="panel__h">Detector and wavelength</h2>
-          <Ruler selected={det} onSelect={setDet} counts={records ? counts : undefined} />
+          <Ruler selected={colour ? undefined : det} onSelect={setDet} counts={records ? counts : undefined} />
+          <label className="check"><input type="checkbox" checked={colour} onChange={(e) => setColour(e.target.checked)} />Colour, from three detectors</label>
+          {colour && (
+            <p className="note">
+              <span className="swatch swatch--b" />D2 blue, <span className="swatch swatch--g" />D4 green, <span className="swatch swatch--r" />D6 red. Cold objects such as brown dwarfs come out red. Anything that moves within a pass splits into coloured dots. Loads about three times as much.
+            </p>
+          )}
         </section>
 
         <section className="panel" aria-label="Plates">
           <h2 className="panel__h">Group exposures by</h2>
           <div className="seg" role="group" aria-label="Grouping">
-            {MODES.map((m) => <button key={m.v} type="button" aria-pressed={mode === m.v} onClick={() => { setMode(m.v); setIdx(0); }}>{m.l}</button>)}
+            {MODES.map((m) => <button key={m.v} type="button" aria-pressed={(colour ? 'pass' : mode) === m.v} disabled={colour && m.v !== 'pass'} onClick={() => { setMode(m.v); setIdx(0); }}>{m.l}</button>)}
           </div>
-          <p className="note">{modeHint}</p>
-          <label className="check"><input type="checkbox" checked={diff} onChange={(e) => setDiff(e.target.checked)} />Subtract the first plate</label>
+          <p className="note">{colour ? 'Colour plates are always one per survey pass.' : modeHint}</p>
+          <label className="check"><input type="checkbox" checked={diff} disabled={colour} onChange={(e) => setDiff(e.target.checked)} />Subtract the first plate{colour ? ' (single detector only)' : ''}</label>
           <label className="check"><input type="checkbox" checked={ends} onChange={(e) => setEnds(e.target.checked)} />Blink only first and last</label>
         </section>
 
@@ -428,7 +455,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
             <button type="button" className="inline-link" onClick={() => copy('embed')}>{copied === 'embed' ? 'Embed code copied' : 'Copy embed code'}</button>
             <button type="button" className="inline-link" onClick={savePng} disabled={!epoch}>Save this plate as PNG</button>
           </div>
-          <p className="note">Keys: space plays, arrows step, 1 to 6 pick a detector, D subtracts.</p>
+          <p className="note">Keys: space plays, arrows step, 1 to 6 pick a detector, C colour, D subtracts.</p>
         </section>
       </div>
     </div>
