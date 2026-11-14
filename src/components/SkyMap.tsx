@@ -237,7 +237,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
 
   const at = pick ? (pick.kind === 'star' ? pick.star : pick) : null;
   return (
-    <div className="sky" ref={host}>
+    <div className="sky" ref={host} data-state={state}>
       <canvas ref={canvas} className="sky__canvas" aria-hidden="true" />
       <div
         className="sky__pad" role="application" tabIndex={0}
@@ -300,7 +300,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         <button type="button" onClick={() => nudge(0, 1)} aria-label="Turn north">&uarr;</button>
         <button type="button" onClick={() => nudge(0, -1)} aria-label="Turn south">&darr;</button>
       </div>
-      {state === 'nogl' && <p className="sky__fallback">The sky map needs WebGL, which this browser has switched off. The search box and the list of stars below work without it.</p>}
+      {state === 'nogl' && <p className="sky__fallback">This is a still picture of the sky: the live map needs WebGL, which this browser has switched off. The search box and the list of stars below work without it.</p>}
     </div>
   );
 }

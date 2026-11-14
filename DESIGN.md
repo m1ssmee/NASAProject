@@ -103,6 +103,10 @@ and a plate is developed from it.
 - **Cost.** Three.js is loaded only on the home page, after the headline has painted.
 
 Deviations from the revision plan: star streaks during the intro became a narrowing field of
-view (points cannot stretch cheaply); the no-WebGL state shows a message and the star list
-instead of a pre-rendered sky image; automatic descriptions give the object's name and type
+view (points cannot stretch cheaply); a pre-rendered still of the opening view (`public/sky/first.jpg`, made by
+`scripts/sky-still.mjs`) is shown until the live map is ready and stays, with a note, when WebGL
+is unavailable; automatic descriptions give the object's name and type
 from SIMBAD, without distance.
+
+Phone: the map is 46 svh so the headline, search box and button share the first screen with it;
+the render loop runs at half rate with no idle drift, to keep page scrolling smooth.
