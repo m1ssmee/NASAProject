@@ -13,6 +13,7 @@ export const site = {
   nav: [
     { href: '/view', label: 'Viewer' },
     { href: '/targets', label: 'Targets' },
+    { href: '/craft', label: 'Observatory' },
     { href: '/method', label: 'Method' },
   ],
 };

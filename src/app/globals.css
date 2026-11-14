@@ -594,10 +594,66 @@ html.sky-full #main { z-index: 60; }
 html.sky-full .sky { position: fixed; inset: 0; height: 100dvh; min-height: 0; z-index: 10; border: 0; background-image: none; }
 html.sky-full .sky__tools { top: var(--gutter); }
 .sky__hint { position: absolute; left: var(--gutter); bottom: 1.25rem; right: var(--gutter); z-index: 2; pointer-events: none; font-size: var(--t-s); color: var(--c-muted); text-shadow: 0 0 8px var(--emulsion); }
-.sky[data-filling] .sky__hint { opacity: 0; }
+.sky[data-filling] .sky__hint, .sky[data-filling] .sky__readout { opacity: 0; }
+.sky__hint { right: 50%; }
+.sky__readout { position: absolute; right: var(--gutter); bottom: 1.25rem; z-index: 2; pointer-events: none; font-family: var(--f-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums; white-space: pre; color: var(--glass); background: rgb(16 18 20 / 0.78); border: 1px solid rgb(231 233 230 / 0.35); padding: 0.45rem 0.7rem; }
+@media (max-width: 640px) { .sky__hint { display: none; } .sky__readout { left: var(--gutter); right: var(--gutter); bottom: auto; top: var(--gutter); max-width: calc(100% - 7.5rem); white-space: pre-wrap; font-size: 0.6875rem; } }
 @media (max-width: 640px) { .sky__fullbtn span { display: none; } }
 
 /* Spacecraft inspection page */
 .craftview { position: relative; height: min(72svh, 46rem); min-height: 22rem; border: 1px solid var(--c-line); background: radial-gradient(120% 90% at 50% 110%, #16233d 0%, #0b0d10 55%); cursor: grab; touch-action: pan-y; }
 .craftview:active { cursor: grabbing; }
 .craftview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ───────── Observatory page ───────── */
+.obs { align-items: start; row-gap: 2rem; }
+.obs__model { grid-column: 1 / span 8; }
+.obs__parts { grid-column: 9 / span 4; border-top: 1px solid var(--c-fg); }
+.obs__parts li { border-bottom: 1px solid var(--c-line); position: relative; }
+.obs__parts li:last-child { border-bottom-color: var(--c-fg); }
+.obs__parts button { display: grid; gap: 0.2rem; width: 100%; text-align: left; padding-block: 0.85rem; }
+.obs__fact { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--c-muted); }
+.obs__parts li::before { content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--c-fg); scale: 0 1; transform-origin: left; }
+.obs__parts li:hover::before, .obs__parts li:focus-within::before { scale: 1 1; }
+.obs__parts li.is-open::before { scale: 1 1; background: var(--c-mark); }
+.obs__parts button:hover .obs__fact, .obs__parts li.is-open .obs__fact { color: var(--c-fg); }
+.obs__note { padding-bottom: 1rem; font-size: 0.9375rem; max-width: 44ch; }
+@media (max-width: 960px) { .obs__model, .obs__parts { grid-column: 1 / -1; } .craftview { height: 56svh; } }
+
+.obsnum { border-block: 1px solid var(--c-fg); }
+.obsnum dl { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.obsnum div { padding: clamp(1.25rem, 3.5vh, 2.25rem) var(--gutter) clamp(1.25rem, 3.5vh, 2.25rem) 0; border-right: 1px solid var(--c-line); display: grid; gap: 0.5rem; align-content: start; }
+.obsnum div + div { padding-left: var(--gutter); }
+.obsnum div:last-child { border-right: 0; }
+.obsnum dt { font-stretch: 66%; font-weight: 640; font-size: clamp(2.2rem, 1.2rem + 3.4vw, 4.75rem); line-height: 0.9; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.obsnum dd { font-size: var(--t-s); color: var(--c-muted); max-width: 16ch; }
+@media (max-width: 900px) {
+  .obsnum dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .obsnum div { border-bottom: 1px solid var(--c-line); padding-left: 0 !important; }
+  .obsnum div:nth-child(2n) { border-right: 0; padding-left: var(--gutter) !important; }
+  .obsnum div:nth-last-child(-n + 2) { border-bottom: 0; }
+}
+
+.shot { align-items: start; row-gap: 2.5rem; }
+.shot__copy { grid-column: 1 / span 5; }
+.shot__fig { grid-column: 7 / span 6; }
+.shot__fig svg { width: 100%; height: auto; overflow: visible; }
+.shot__fig figcaption { margin-top: 0.75rem; font-size: var(--t-s); color: var(--c-muted); }
+.shot__sq { fill: none; stroke: var(--c-fg); stroke-width: 0.35; }
+.shot__ch { stroke: var(--c-line); stroke-width: 0.25; }
+.shot__moon { fill: var(--c-fg); }
+.shot__dim { stroke: var(--c-mark); stroke-width: 0.3; }
+.shot__lab { font-family: var(--f-mono); font-size: 2.6px; fill: var(--c-muted); }
+.shot__lab--bg { fill: var(--c-accent); paint-order: stroke; stroke: var(--c-bg); stroke-width: 2px; }
+@media (max-width: 900px) { .shot__copy, .shot__fig { grid-column: 1 / -1; } .shot__lab { font-size: 3.6px; } }
+
+.when { border-top: 1px solid var(--c-fg); }
+.when li { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-items: baseline; padding-block: clamp(0.9rem, 2.4vh, 1.5rem); border-bottom: 1px solid var(--c-line); }
+.when li:last-child { border-bottom-color: var(--c-fg); }
+.when__d { grid-column: 1 / span 3; color: var(--c-accent); }
+.when__t { grid-column: 4 / span 3; }
+.when__p { grid-column: 7 / span 6; font-size: 0.9375rem; max-width: 52ch; }
+@media (max-width: 760px) { .when__d, .when__t, .when__p { grid-column: 1 / -1; } .when__t { margin-top: 0.2rem; } .when__p { margin-top: 0.35rem; } }
+
+/* Four menu items: tighten the header on small phones */
+@media (max-width: 480px) { .site-nav { gap: 0.7rem; } .site-header { font-size: 0.75rem; } .lamp { display: none; } }

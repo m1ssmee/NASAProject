@@ -37,6 +37,15 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const [full, setFullState] = useState(false);
   const fullRef = useRef(false);
   const fillTween = useRef<gsap.core.Tween | null>(null);
+  const readout = useRef<HTMLParagraphElement>(null);
+  // Where the pointer is on the sky, written straight to the readout (no re-render per move).
+  const track = (e: React.PointerEvent) => {
+    const out = readout.current, el = host.current;
+    if (!out || !el) return;
+    const r = el.getBoundingClientRect();
+    const s = toSky(view.current, e.clientX - r.left, e.clientY - r.top);
+    out.textContent = `${formatRa(s.ra, 1)}  ${formatDec(s.dec, 0)}   ${s.ra.toFixed(3)}\u00b0 ${s.dec >= 0 ? '+' : '\u2212'}${Math.abs(s.dec).toFixed(3)}\u00b0`;
+  };
 
   const setPick = useCallback((p: Pick | null) => { pickRef.current = p; setPickState(p); dirty.current = true; }, []);
   const hold = () => { if (closeTimer.current) clearTimeout(closeTimer.current); closeTimer.current = null; };
@@ -303,7 +312,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
 
   const at = pick ? (pick.kind === 'star' ? pick.star : pick) : null;
   return (
-    <div className="sky" ref={host} data-state={state}>
+    <div className="sky" ref={host} data-state={state} onPointerMove={track} onPointerDown={track}>
       <canvas ref={canvas} className="sky__canvas" aria-hidden="true" />
       <div
         className="sky__pad" role="application" tabIndex={0}
@@ -374,6 +383,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         <button type="button" onClick={() => nudge(0, 1)} aria-label="Turn north">&uarr;</button>
         <button type="button" onClick={() => nudge(0, -1)} aria-label="Turn south">&darr;</button>
       </div>
+      {full && <p className="sky__readout" ref={readout} aria-hidden="true">Move the pointer over the sky</p>}
       {full && <p className="sky__hint">Click any star, or any spot, to see its coordinates and blink it. Esc leaves full screen.</p>}
       {state === 'nogl' && <p className="sky__fallback">This is a still picture of the sky: the live map needs WebGL, which this browser has switched off. The search box and the list of stars below work without it.</p>}
     </div>

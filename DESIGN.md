@@ -147,3 +147,13 @@ the solar array hanging along the sun side with its struts and hinge brackets. L
 (one hard sun, faint earthshine) with a generated reflection environment. All textures are drawn
 in code; nothing is downloaded. `src/sky/stage.ts` holds the model's scene so the opening and
 the new inspection page `/craft` (drag to turn it) share it.
+
+## Revision 6: observatory page and full-screen readout
+
+- "Observatory" joins the top menu. The page is the model beside a list of six parts; choosing a
+  part turns the model to show it and opens a short note. Below: six figures, a to-scale diagram of
+  one exposure (three detector pairs, the full Moon for size, the 17 colour stripes), and a short
+  timeline whose last entry is read from the daily archive check.
+- In full-screen map mode a readout at the bottom right follows the pointer with the sky
+  coordinates under it, sexagesimal and decimal.
+- On phones under 480 px the header drops the wordmark text and the A/B dots to fit four links.
