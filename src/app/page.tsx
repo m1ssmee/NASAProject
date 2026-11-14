@@ -3,8 +3,14 @@ import { BakedPlate } from '@/components/BakedPlate';
 import { HeroPlate } from '@/components/HeroPlate';
 import { Hop } from '@/components/Hop';
 import { Ruler } from '@/components/Ruler';
+import { FreshStrip, type FreshData } from '@/components/FreshStrip';
 import { Seek } from '@/components/Seek';
+import { SkyMap } from '@/components/SkyMap';
+import { notedStars, viewerHref } from '@/data/stars';
 import { targets } from '@/data/targets';
+import freshJson from '../../public/sky/fresh.json';
+
+const fresh = freshJson as FreshData;
 
 const rate = (t: (typeof targets)[number]) => {
   const pm = Math.hypot(t.pmRa, t.pmDec) / 1000;
@@ -14,26 +20,29 @@ const rate = (t: (typeof targets)[number]) => {
 export default function Home() {
   return (
     <>
-      <section className="hero wrap grid" aria-labelledby="hero-h">
-        <div className="hero__copy">
-          <h1 id="hero-h" className="display" data-split="lines" data-intro>Something in this picture moved.</h1>
-          <p className="lede">
-            SPHEREx photographs the whole sky in infrared twice a year. Swap two of its pictures of the same patch back and forth, and anything that travels gives itself away.
-          </p>
-          <div data-reveal="fade" data-intro data-delay="0.35">
-            <Seek />
+      <section className="skyhero" aria-labelledby="hero-h">
+        <SkyMap fresh={fresh.fields.slice(0, 40)} />
+        <div className="skyhero__over grid">
+          <div className="skyhero__h">
+            <h1 id="hero-h" className="display">Something up here moved.</h1>
           </div>
-        </div>
-        <div className="hero__plate">
-          <HeroPlate />
+          <div className="skyhero__seek">
+            <p className="skyhero__hint">Drag the sky. Pick a ringed star, or any spot, and SPHEREx shows you how it changed.</p>
+            <Seek hint={false} />
+          </div>
         </div>
       </section>
 
+      <FreshStrip data={fresh} />
+
       <section className="sec wrap" aria-labelledby="read-h">
-        <div className="grid">
-          <div className="sec__head sec__head--split">
+        <div className="grid game">
+          <div className="game__plate">
+            <HeroPlate />
+          </div>
+          <div className="game__copy">
             <h2 id="read-h" className="h-xl" data-split="lines">Pluto was found this way in 1930.</h2>
-            <p data-reveal="fade">
+            <p className="lede" style={{ marginTop: '1.5rem', maxWidth: '40ch' }} data-reveal="fade">
               Clyde Tombaugh flicked between two glass plates until one dot jumped. The machine was called a blink comparator. This is one, pointed at a billion infrared sources nobody has finished looking through.
             </p>
           </div>
@@ -79,6 +88,25 @@ export default function Home() {
                 <span className="index__name h-l"><Hop>{t.name}</Hop></span>
                 <span className="index__kind">{t.kind}</span>
                 <span className="index__move mono">{rate(t)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="sec--tight wrap" aria-labelledby="noted-h">
+        <div className="grid">
+          <div className="sec__head">
+            <h2 id="noted-h" className="h-xl" data-split="lines">Stars with notes</h2>
+            <p className="muted" style={{ marginTop: '1rem', maxWidth: '52ch' }}>Every ringed star on the map, as a list. Each opens the viewer at that star.</p>
+          </div>
+        </div>
+        <ul className="noted">
+          {notedStars.filter((s) => !s.target).map((s) => (
+            <li key={s.id}>
+              <Link href={viewerHref({ ...s, name: s.name })}>
+                <b>{s.name}</b>
+                <span>{s.kind}{s.distance ? `, ${s.distance}` : ''}</span>
               </Link>
             </li>
           ))}

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', siteName: site.name, images: ['/og.png'] },
   twitter: { card: 'summary_large_image' },
 };
-export const viewport: Viewport = { themeColor: '#e7e9e6' };
+export const viewport: Viewport = { themeColor: '#101214' };
 
 // Runs before first paint: motion flags and the visitor's plate polarity.
 const flags = `var h=document.documentElement;h.classList.add('js');if(!matchMedia('(prefers-reduced-motion: reduce)').matches)h.classList.add('motion');try{if(localStorage.getItem('plate')==='positive')h.dataset.plate='positive'}catch(e){}`;

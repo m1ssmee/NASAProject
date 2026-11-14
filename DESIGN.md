@@ -69,3 +69,40 @@ Screenshot:  A negative star field with red tick marks beside one star, the head
   last for all six), so they are bundled in `src/data/wave.json`.
 - Deep fields (thousands of exposures) are thinned evenly in time to 120 per detector, and a pass
   is closed after 45 days so continuous coverage still yields several plates.
+
+## Revision 2: the finder (sky map, spacecraft intro, new-data layer)
+
+Requested by the owner after the first release. The blink comparator stays the idea; the home
+page gains the observatory's other instrument, the finder: look at the whole sky, pick a spot,
+and a plate is developed from it.
+
+- **Theme split.** The site is now night sky (`--c-bg` emulsion, `--c-fg` glass). Plates keep
+  the glass-negative palette through `.plate` scoped tokens, so they read as light squares
+  developed from the dark. The header "Invert" switch changes plate tone only.
+- **Sky map** (`src/components/SkyMap.tsx`, `src/sky/*`). 9,096 Bright Star Catalogue stars as
+  one Three.js point cloud, projected stereographically in the vertex shader; the same maths in
+  `src/sky/project.ts` drives picking and DOM markers, and is unit tested. Drag turns the sky,
+  ctrl-wheel or pinch zooms (a plain wheel scrolls the page), buttons and arrow keys do both.
+- **Stars with notes.** 34 hand-written entries plus the five targets (`src/data/stars.ts`).
+  Only these shine: variables pulse steadily at a rate scaled from their period, the rest catch
+  the light occasionally. Each is a real button, so hover, tap and Tab all open the card. The
+  same entries are a plain list lower on the page for screen readers and browsers without WebGL.
+- **Any other point.** A click drops the wax tick, shows coordinates, and asks SIMBAD for the
+  brightest catalogued object nearby.
+- **New signature moment.** "Blink this star" grows a glass disc out of the chosen point until it
+  covers the screen, then the viewer opens: a plate developed from the sky.
+- **Opening sequence.** SPHEREx, drawn in code from its real silhouette (no public 3D model
+  exists; NASA's 3D repository was checked), recedes while the field of view narrows so the
+  stars spread, then flies to the header and becomes the logo mark. 2.4 s, once per session,
+  skipped by any click, key or scroll, never played under reduced motion.
+- **Idle.** The sky drifts slowly until touched; noted stars shine. Under reduced motion the
+  sky is still and noted stars keep their static rings.
+- **Newly photographed.** `scripts/fresh.mts` runs daily in GitHub Actions, samples 96 positions
+  across the sky, and writes `public/sky/fresh.json`. IRSA does not answer time-only searches, so
+  a full list of new exposures was not possible; the page says it is a sample.
+- **Cost.** Three.js is loaded only on the home page, after the headline has painted.
+
+Deviations from the revision plan: star streaks during the intro became a narrowing field of
+view (points cannot stretch cheaply); the no-WebGL state shows a message and the star list
+instead of a pre-rendered sky image; automatic descriptions give the object's name and type
+from SIMBAD, without distance.

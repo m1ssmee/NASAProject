@@ -34,11 +34,20 @@ If Node reports `unable to get local issuer certificate` when the app calls IRSA
    the sky median is removed, and exposures are stacked per survey pass.
 4. `/api/resolve` (Sesame, SIMBAD) and `/api/catalog` (Gaia DR3 via VizieR) proxy the lookups.
 
+## Sky map
+
+The home page is a map of the real sky (`src/components/SkyMap.tsx`, `src/sky/`). Stars come from
+`public/sky/stars.bin`, baked from the Yale Bright Star Catalogue with `npx tsx scripts/bake-stars.mts`.
+The stars that carry notes are in `src/data/stars.ts`; edit that file to add or correct one.
+
 ## Keeping up with new data
 
 Images are discovered live, so weekly additions appear on their own. When IRSA publishes a new
 release, add its collection name to `src/config/releases.ts`. To refresh the pre-rendered plates
 used on the home and target pages: `npm run bake`.
+
+`scripts/fresh.mts` samples 96 sky positions and writes `public/sky/fresh.json`, the list of
+newly photographed fields. `.github/workflows/fresh.yml` runs it daily and commits the result.
 
 ## Layout
 

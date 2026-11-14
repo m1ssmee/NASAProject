@@ -30,7 +30,7 @@ export function formatRa(ra: number, digits = 2): string {
   s = Math.round(s * f) / f;
   if (s >= 60) { s -= 60; m += 1; }
   if (m >= 60) { m -= 60; h = (h + 1) % 24; }
-  return `${pad(h)}h ${pad(m)}m ${s.toFixed(digits).padStart(3 + digits, '0')}s`;
+  return `${pad(h)}h ${pad(m)}m ${s.toFixed(digits).padStart(digits ? 3 + digits : 2, '0')}s`;
 }
 
 export function formatDec(dec: number, digits = 1): string {
@@ -43,7 +43,7 @@ export function formatDec(dec: number, digits = 1): string {
   s = Math.round(s * f) / f;
   if (s >= 60) { s -= 60; m += 1; }
   if (m >= 60) { m -= 60; d += 1; }
-  return `${sign}${pad(d)}° ${pad(m)}′ ${s.toFixed(digits).padStart(3 + digits, '0')}″`;
+  return `${sign}${pad(d)}° ${pad(m)}′ ${s.toFixed(digits).padStart(digits ? 3 + digits : 2, '0')}″`;
 }
 
 /**

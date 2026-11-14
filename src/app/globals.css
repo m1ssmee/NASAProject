@@ -4,13 +4,14 @@
   --emulsion: #101214;
   --wax: #d8321c;
 
-  --c-bg: var(--glass);
-  --c-fg: var(--emulsion);
-  --c-muted: #4a5055;
-  --c-line: rgb(16 18 20 / 0.16);
-  --c-accent: #b8260f; /* wax pencil, darkened to pass AA as text on glass */
+  /* The site is night sky; plates are the light squares developed from it. */
+  --c-bg: var(--emulsion);
+  --c-fg: var(--glass);
+  --c-muted: #a3a9ad;
+  --c-line: rgb(231 233 230 / 0.2);
+  --c-accent: #ff6a52; /* wax pencil, lightened to pass AA as text on the dark ground */
   --c-mark: var(--wax);
-  --c-curtain: var(--emulsion);
+  --c-curtain: #1d2124;
 
   --f-display: var(--font-display), 'Arial Narrow', system-ui, sans-serif;
   --f-body: var(--font-display), system-ui, sans-serif;
@@ -32,14 +33,21 @@
   --z-header: 50;
   --z-curtain: 90;
 }
-/* Positive plate: the same site with ground and ink exchanged. */
-html[data-plate='positive'] {
+/* A plate carries its own palette: glass negative by default, positive when inverted. */
+.plate {
+  --c-bg: var(--glass);
+  --c-fg: var(--emulsion);
+  --c-muted: #4a5055;
+  --c-line: rgb(16 18 20 / 0.16);
+  --c-accent: #b8260f;
+  color: var(--c-fg);
+}
+html[data-plate='positive'] .plate {
   --c-bg: var(--emulsion);
   --c-fg: var(--glass);
   --c-muted: #a3a9ad;
   --c-line: rgb(231 233 230 / 0.2);
   --c-accent: #ff6a52;
-  --c-curtain: var(--glass);
 }
 
 /* ───────── Foundation ───────── */
@@ -439,3 +447,99 @@ input[type='range']:hover::-moz-range-thumb { background: var(--c-mark); }
 /* The page-change blink swaps the plate, not the frame: the header stays put. */
 #curtain { top: var(--header-h); }
 body:not(:has(.site-header)) #curtain { top: 0; }
+
+/* ───────── Sky map: the finder ───────── */
+.on-glass {
+  --c-bg: var(--glass); --c-fg: var(--emulsion); --c-muted: #4a5055;
+  --c-line: rgb(16 18 20 / 0.16); --c-accent: #b8260f; color: var(--c-fg);
+}
+.skyhero { position: relative; }
+.sky { position: relative; height: min(78svh, 60rem); min-height: 26rem; overflow: hidden; background: var(--emulsion); border-bottom: 1px solid var(--c-line); }
+.sky__canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sky__pad { position: absolute; inset: 0; cursor: grab; touch-action: pan-y; outline-offset: -4px; }
+.sky__pad:active { cursor: grabbing; }
+.sky__layer { position: absolute; inset: 0; pointer-events: none; }
+.sky__layer > * { position: absolute; left: 0; top: 0; visibility: hidden; }
+.sky__star { width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%; pointer-events: auto; }
+.sky__star::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; border: 1px solid rgb(231 233 230 / 0.45); scale: 1; }
+.sky__star:hover::before, .sky__star:focus-visible::before, .sky__star.is-open::before { inset: 2px; border: 1.5px solid var(--wax); }
+.sky__star:focus-visible { outline: 2px solid var(--wax); outline-offset: 3px; }
+.sky__star--target::before { inset: 3px; border: 1.5px solid var(--wax); }
+.sky__star--target:hover::before, .sky__star--target:focus-visible::before, .sky__star--target.is-open::before { inset: -2px; border-width: 2px; }
+.sky__label { position: absolute; left: 30px; top: 5px; white-space: nowrap; font-family: var(--f-mono); font-size: 0.6875rem; color: var(--glass); text-shadow: 0 0 6px var(--emulsion), 0 0 2px var(--emulsion); }
+.sky__field { width: var(--side, 40px); height: var(--side, 40px); margin: calc(var(--side, 40px) / -2) 0 0 calc(var(--side, 40px) / -2); border: 1px dashed rgb(255 106 82 / 0.7); }
+.sky__mark { width: 0; height: 0; }
+.sky__mark::before { content: ''; position: absolute; left: 7px; top: -1px; width: 14px; height: 2px; background: var(--wax); }
+.sky__mark::after { content: ''; position: absolute; left: -1px; top: -21px; width: 2px; height: 14px; background: var(--wax); }
+
+.sky__card { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; }
+.sky__cardin { position: absolute; width: min(19rem, calc(100vw - 2rem)); padding: 0.9rem 1rem 1rem; background: var(--glass); border: 1px solid var(--emulsion); display: grid; gap: 0.35rem; }
+.sky__card[data-side='rd'] .sky__cardin, .sky__card:not([data-side]) .sky__cardin { left: 18px; top: 18px; }
+.sky__card[data-side='ld'] .sky__cardin { right: 18px; top: 18px; }
+.sky__card[data-side='ru'] .sky__cardin { left: 18px; bottom: 18px; }
+.sky__card[data-side='lu'] .sky__cardin { right: 18px; bottom: 18px; }
+.sky__name { font-stretch: 78%; font-weight: 640; font-size: 1.35rem; line-height: 1.05; letter-spacing: -0.015em; }
+.sky__kind { font-size: var(--t-s); color: var(--c-muted); }
+.sky__note { font-size: 0.9375rem; line-height: 1.4; }
+.sky__coords { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--c-muted); }
+.sky__links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; margin-top: 0.45rem; font-size: var(--t-s); }
+.sky__links .btn { min-height: 2.5rem; }
+@media (max-width: 640px) {
+  .sky { height: 62svh; }
+  .sky__card { translate: 0 0 !important; inset: auto 0 0 0; width: auto; height: auto; }
+  .sky__card .sky__cardin { position: static; width: auto; border-width: 1px 0 0; }
+}
+
+.sky__tools { position: absolute; right: var(--gutter); top: 1rem; display: grid; grid-template-columns: repeat(2, 2.5rem); border: 1px solid rgb(231 233 230 / 0.5); background: rgb(16 18 20 / 0.7); z-index: 2; }
+.sky__tools button { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; color: var(--glass); font-size: 1rem; border-right: 1px solid rgb(231 233 230 / 0.25); border-bottom: 1px solid rgb(231 233 230 / 0.25); }
+.sky__tools button:nth-child(2n) { border-right: 0; }
+.sky__tools button:nth-last-child(-n + 2) { border-bottom: 0; }
+.sky__tools button:hover, .sky__tools button:focus-visible { background: var(--glass); color: var(--emulsion); }
+.sky__tools button:active { background: var(--wax); }
+.sky__fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 2rem; color: var(--c-muted); max-width: 44ch; margin: auto; }
+
+/* Headline and search sit over the lower edge of the sky, on a scrim. */
+.skyhero__over { position: absolute; inset: auto 0 0 0; z-index: 2; pointer-events: none; padding: clamp(4rem, 14vh, 9rem) var(--gutter) clamp(1rem, 3vh, 2rem); background: linear-gradient(to top, rgb(16 18 20 / 0.94) 0%, rgb(16 18 20 / 0.78) 45%, rgb(16 18 20 / 0) 100%); align-items: end; row-gap: 1.25rem; }
+.skyhero__over > * { pointer-events: auto; }
+.skyhero__h { grid-column: 1 / span 7; pointer-events: none; }
+.skyhero__h .display { font-size: clamp(2.9rem, 0.8rem + 8.2vw, 9.5rem); }
+.skyhero__seek { grid-column: 8 / span 5; }
+.skyhero__hint { font-size: var(--t-s); color: var(--c-muted); margin-bottom: 0.6rem; }
+@media (max-width: 900px) {
+  .skyhero__over { position: static; background: none; padding-top: 1.5rem; }
+  .skyhero__h, .skyhero__seek { grid-column: 1 / -1; }
+}
+
+/* The plate that grows out of the chosen point on the way to the viewer. */
+.develop { position: fixed; z-index: 95; background: var(--glass); border-radius: 50%; pointer-events: none; }
+
+/* Header: the spacecraft mark. Hidden while the real one is flying to this spot. */
+.wordmark__craft { width: 22px; height: 22px; flex: none; }
+.wordmark__craft path, .wordmark__craft line { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+html.intro-running .wordmark__craft { opacity: 0; }
+.wordmark:hover .wordmark__craft, .wordmark:focus-visible .wordmark__craft { color: var(--c-mark); rotate: -18deg; }
+
+/* New this week */
+.fresh { border-block: 1px solid var(--c-line); padding-block: clamp(1.5rem, 4vh, 2.5rem); row-gap: 1.25rem; align-items: start; }
+.fresh__head { grid-column: 1 / span 4; }
+.fresh__list { grid-column: 5 / span 8; display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: 0 var(--gutter); }
+.fresh__list a { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: baseline; padding-block: 0.6rem; border-top: 1px solid var(--c-line); font-family: var(--f-mono); font-size: 0.8125rem; position: relative; }
+.fresh__list a:hover, .fresh__list a:focus-visible { background: var(--c-fg); color: var(--c-bg); box-shadow: -0.5rem 0 0 var(--c-fg), 0.5rem 0 0 var(--c-fg); }
+.fresh__list a span:last-child { color: var(--c-muted); }
+.fresh__list a:hover span:last-child, .fresh__list a:focus-visible span:last-child { color: inherit; }
+@media (max-width: 900px) { .fresh__head, .fresh__list { grid-column: 1 / -1; } }
+
+/* Stars with notes: the same entries as a plain list (keyboard, screen reader and no-WebGL path) */
+.noted { columns: 4 13rem; column-gap: var(--gutter); }
+.noted li { break-inside: avoid; border-top: 1px solid var(--c-line); }
+.noted a { display: grid; gap: 0.1rem; padding-block: 0.6rem; }
+.noted a b { font-weight: 600; font-stretch: 86%; }
+.noted a span { font-size: var(--t-s); color: var(--c-muted); }
+.noted a:hover b, .noted a:focus-visible b { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+.noted a:hover span { color: var(--c-fg); }
+
+/* The mark-the-mover plate, now part of the lesson */
+.game { align-items: center; row-gap: 2rem; margin-bottom: clamp(2.5rem, 7vh, 5rem); }
+.game__plate { grid-column: 1 / span 5; }
+.game__copy { grid-column: 7 / span 6; }
+@media (max-width: 900px) { .game__plate, .game__copy { grid-column: 1 / -1; } .game__plate { max-width: 30rem; } }
