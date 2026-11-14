@@ -1,11 +1,19 @@
 // Site-wide content. Items marked placeholder are assumptions for the team to replace.
 export const site = {
-  name: 'Second Plate', // placeholder: working title
+  name: 'Blinkscope',
   role: 'SPHEREx blink comparator',
-  // placeholder: set NEXT_PUBLIC_SITE_URL to the production URL at build time
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://second-plate.example',
+  // Set NEXT_PUBLIC_SITE_URL to a custom domain if there is one. On Vercel the address is
+  // picked up automatically: the production domain if this is production, else the deployment's own.
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' && process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.NEXT_PUBLIC_VERCEL_URL
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : 'http://localhost:3000'),
   description:
     'Enter a sky position and blink real SPHEREx infrared images of it across time. Whatever jumps between plates is moving. A NASA Space Apps 2026 project.',
+  // placeholder: put the real team name here and set placeholder to false; the footer then credits it
   team: { name: 'Team name', placeholder: true },
   challengeUrl: 'https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/',
   acknowledgement:

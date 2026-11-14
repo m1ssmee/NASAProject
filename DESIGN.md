@@ -1,11 +1,11 @@
-# Second Plate: design record
+# Blinkscope: design record
 
 ## Brief
 - **Subject:** a public web tool for the NASA Space Apps 2026 challenge "Planet X and SPHEREx".
   Enter a sky position, see SPHEREx images of it over time as a blink, spot what moves.
 - **Audience:** citizen scientists and hackathon judges; then astronomers who want an embeddable blink.
 - **Job:** a first-time visitor sees a real object move within ten seconds, then searches their own coordinates.
-- **Assumptions (placeholders in `src/data/site.ts`):** site name "Second Plate", team name, production URL.
+- **Assumptions (placeholders in `src/data/site.ts`):** team name. The site was first called "Second Plate"; it was renamed Blinkscope at the owner's request before deployment.
 
 ## Concept
 | | A. Blink comparator (process) | B. The filter is the page (material) | C. Everything is a coordinate (formal) |

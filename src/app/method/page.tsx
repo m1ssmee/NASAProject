@@ -6,7 +6,7 @@ import { site } from '@/data/site';
 
 export const metadata: Metadata = {
   title: 'Method',
-  description: 'How Second Plate turns SPHEREx exposures into aligned plates: archive search, partial file reads, reprojection, stacking by survey pass, and the limits.',
+  description: 'How Blinkscope turns SPHEREx exposures into aligned plates: archive search, partial file reads, reprojection, stacking by survey pass, and the limits.',
 };
 
 export default function Method() {

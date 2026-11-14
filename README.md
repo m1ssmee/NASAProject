@@ -1,4 +1,4 @@
-# Second Plate
+# Blinkscope
 
 A blink comparator for SPHEREx, built for the NASA Space Apps 2026 challenge
 [Planet X and SPHEREx](https://www.spaceappschallenge.org/2026/challenges/planet-x-and-spherex/).
