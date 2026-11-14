@@ -2,13 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { FreshData } from '@/components/FreshStrip';
 import { Hop } from '@/components/Hop';
+import { LiveOrbit } from '@/components/LiveOrbit';
 import { Observatory } from '@/components/Observatory';
 import { Ruler } from '@/components/Ruler';
+import { VideoShelf } from '@/components/VideoShelf';
+import { resources, videos } from '@/data/media';
 import freshJson from '../../../public/sky/fresh.json';
 
 export const metadata: Metadata = {
   title: 'The observatory',
-  description: 'SPHEREx up close: a model you can turn, what each part does, how much sky one exposure covers, and where the mission stands today.',
+  description: 'SPHEREx up close: a model you can turn, what each part does, official videos, NASA\u2019s live tracker, and where the mission stands today.',
 };
 
 const fresh = freshJson as FreshData;
@@ -49,6 +52,14 @@ export default function Craft() {
         </dl>
       </section>
 
+      <section className="sec wrap" aria-labelledby="watch-h">
+        <div className="grid"><div className="sec__head">
+          <h2 id="watch-h" className="h-xl" data-split="lines">Watch it leave the ground</h2>
+          <p className="muted" style={{ marginTop: '1rem', maxWidth: '52ch' }}>Seven films from NASA, JPL and Caltech, from the briefing before launch to the launch itself. They play here.</p>
+        </div></div>
+        <VideoShelf videos={videos} />
+      </section>
+
       <section className="sec wrap grid shot" aria-labelledby="shot-h">
         <div className="shot__copy">
           <h2 id="shot-h" className="h-xl" data-split="lines">One exposure, twenty-two Moons wide</h2>
@@ -78,6 +89,10 @@ export default function Craft() {
         </figure>
       </section>
 
+      <section className="sec--tight wrap" aria-label="Live position">
+        <LiveOrbit />
+      </section>
+
       <section className="sec--tight wrap" aria-labelledby="when-h">
         <div className="grid"><div className="sec__head"><h2 id="when-h" className="h-xl" data-split="lines">Where the mission stands</h2></div></div>
         <ol className="when">
@@ -92,6 +107,31 @@ export default function Craft() {
         <p style={{ marginTop: 'clamp(2rem, 5vh, 3.5rem)' }}>
           <Link href="/view" className="btn"><Hop tick={false}>See what it has photographed</Hop></Link>
         </p>
+      </section>
+
+      <section className="sec wrap" aria-labelledby="more-h">
+        <div className="grid"><div className="sec__head">
+          <h2 id="more-h" className="h-xl" data-split="lines">Everything else, one step away</h2>
+          <p className="muted" style={{ marginTop: '1rem', maxWidth: '52ch' }}>The official pages behind this site. Each opens in a new tab, so this one stays where you left it.</p>
+        </div></div>
+        <div className="res">
+          {resources.map((g) => (
+            <div key={g.group}>
+              <h3>{g.group}</h3>
+              <ul>
+                {g.items.map((r) => (
+                  <li key={r.href}>
+                    <a href={r.href} target="_blank" rel="noopener noreferrer">
+                      <em>{r.from}</em>
+                      <b>{r.name}</b>
+                      <span>{r.what}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </section>
 
       <p className="wrap small muted" style={{ paddingBottom: 'clamp(3rem, 8vh, 6rem)', maxWidth: '80ch' }}>

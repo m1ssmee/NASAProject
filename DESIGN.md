@@ -157,3 +157,12 @@ the new inspection page `/craft` (drag to turn it) share it.
 - In full-screen map mode a readout at the bottom right follows the pointer with the sky
   coordinates under it, sexagesimal and decimal.
 - On phones under 480 px the header drops the wordmark text and the A/B dots to fit four links.
+
+## Revision 7: observatory media
+
+The observatory page now carries seven official films (NASA JPL, NASA Science, Caltech) in an
+on-page player, NASA Eyes on the Solar System embedded as a live tracker, and twelve official
+links in three groups. Nothing from YouTube or NASA Eyes loads until the visitor asks: videos
+are a still and a title until played (then youtube-nocookie.com), and the tracker sits behind a
+button. Links open in new tabs because NASA pages cannot be relied on to allow framing. The list
+is in `src/data/media.ts`; every video id was checked against YouTube.
