@@ -762,7 +762,7 @@ html.sky-full .sky__tools { top: var(--gutter); }
 .plate__hit.is-picking { box-shadow: inset 0 0 0 3px var(--c-mark); cursor: crosshair; animation: pick 1.2s steps(1) infinite; }
 @keyframes pick { 50% { box-shadow: inset 0 0 0 6px var(--c-mark); } }
 @media (max-width: 560px) { .reportbar { grid-template-columns: 1fr; } }
-.report { width: min(40rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 0; border: 1px solid var(--c-fg); background: var(--c-bg); color: var(--c-fg); margin: auto; }
+.report { width: min(40rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 0; border: 1px solid var(--c-fg); background: var(--c-bg); color: var(--c-fg); margin: auto; }
 .report::backdrop { background: rgb(8 9 10 / 0.72); }
 .report__in { display: grid; gap: 0.9rem; padding: clamp(1.1rem, 3vw, 1.75rem); }
 .report__in header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }

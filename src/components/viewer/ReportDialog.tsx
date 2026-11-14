@@ -68,7 +68,7 @@ export function ReportDialog({ open, onClose, sky, seenIn, plates, link }: Props
   };
 
   return (
-    <dialog ref={ref} className="report" onClose={onClose} aria-labelledby="report-h">
+    <dialog ref={ref} className="report" onClose={onClose} aria-labelledby="report-h" data-lenis-prevent>
       {sky && (
         <form method="dialog" className="report__in" onSubmit={(e) => e.preventDefault()}>
           <header>
