@@ -435,3 +435,7 @@ input[type='range']:hover::-moz-range-thumb { background: var(--c-mark); }
 .viewer__panel, .viewer__stage, .panel { min-width: 0; }
 .ruler__seg { min-width: 0; overflow: hidden; }
 .plate__hit:hover, .plate__hit:focus-visible { box-shadow: inset 0 0 0 3px var(--c-mark); outline: none; }
+.method__aside .ruler__seg span { display: none; }
+/* The page-change blink swaps the plate, not the frame: the header stays put. */
+#curtain { top: var(--header-h); }
+body:not(:has(.site-header)) #curtain { top: 0; }

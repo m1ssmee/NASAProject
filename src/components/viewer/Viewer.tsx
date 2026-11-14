@@ -348,7 +348,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
           <h1>{name ?? 'Sky position'}</h1>
           <p className="coords">{formatRa(ra)}<br />{formatDec(dec)}</p>
           <p className="note mono">{ra.toFixed(5)}, {dec >= 0 ? '+' : ''}{dec.toFixed(5)} deg</p>
-          {!embed && <Seek hint={false} />}
+          {!embed && <Seek hint={false} initial={name ?? `${ra.toFixed(5)} ${dec >= 0 ? '+' : ''}${dec.toFixed(5)}`} />}
         </section>
 
         <section className="panel" aria-label="Detector">
