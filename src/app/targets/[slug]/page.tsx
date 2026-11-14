@@ -32,8 +32,8 @@ export default async function TargetPage({ params }: { params: Promise<{ slug: s
       </header>
       <div className="case wrap grid">
         <div className="case__plate">
-          <BakedPlate slug={t.slug} size={72} alt={`SPHEREx detector ${t.det} image centred on ${t.name}, alternating between the first and latest survey pass. ${t.look}`} />
-          <p className="small muted" style={{ marginTop: '0.6rem' }}>Detector {t.det}, each plate a stack of one survey pass. North is up, east is left.</p>
+          <BakedPlate slug={t.slug} colour size={72} alt={`Colour SPHEREx image centred on ${t.name}, alternating between the first and latest survey pass. ${t.look}`} />
+          <p className="small muted" style={{ marginTop: '0.6rem' }}>Three detectors as blue, green and red (1.1 to 5.0 microns), each plate a stack of one survey pass. North is up, east is left.</p>
         </div>
         <div className="case__body">
           <section aria-labelledby="look-h">

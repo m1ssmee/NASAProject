@@ -44,14 +44,9 @@ export function subtract(a: Float32Array, b: Float32Array): Float32Array {
  * stretched against its own limits so the sky is neutral. Colour plates are always light on
  * dark, the way NASA's composites are.
  */
-export function paintRgb(
-  canvas: HTMLCanvasElement, channels: (Float32Array | null)[], n: number, limits: (Limits | null)[], gain = 1,
-) {
-  if (canvas.width !== n) { canvas.width = n; canvas.height = n; }
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const img = ctx.createImageData(n, n);
-  const px = img.data;
+/** The RGBA bytes of a colour plate (see paintRgb). Pure, so the bake script can use it too. */
+export function rgbaFromChannels(channels: (Float32Array | null)[], n: number, limits: (Limits | null)[], gain = 1): Uint8ClampedArray {
+  const px = new Uint8ClampedArray(n * n * 4);
   const ls = limits.map((l) => (l && gain !== 1 ? { ...l, hi: l.lo + (l.hi - l.lo) / gain } : l));
   const [b, g, r] = channels;
   const level = (c: Float32Array | null, l: Limits | null, i: number) => {
@@ -77,5 +72,16 @@ export function paintRgb(
     }
     px[o + 3] = 255;
   }
+  return px;
+}
+
+export function paintRgb(
+  canvas: HTMLCanvasElement, channels: (Float32Array | null)[], n: number, limits: (Limits | null)[], gain = 1,
+) {
+  if (canvas.width !== n) { canvas.width = n; canvas.height = n; }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const img = ctx.createImageData(n, n);
+  img.data.set(rgbaFromChannels(channels, n, limits, gain));
   ctx.putImageData(img, 0, 0);
 }

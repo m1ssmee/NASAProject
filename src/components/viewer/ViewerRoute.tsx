@@ -4,7 +4,7 @@ import { Hop } from '@/components/Hop';
 import { Seek } from '@/components/Seek';
 import { targetNow, targets } from '@/data/targets';
 import type { Mode } from '@/lib/frames';
-import { Viewer, type ViewParams } from './Viewer';
+import { Viewer, type Stack, type ViewParams } from './Viewer';
 
 const FOVS = [120, 300, 600, 1200];
 
@@ -36,6 +36,13 @@ export function ViewerRoute({ query, embed = false }: { query: Query; embed?: bo
                 </li>
               );
             })}
+            <li>
+              <Link className="index__row" href={`${base}?ra=216.79261&dec=-32.51587&det=2&mode=burst&plate=13&name=${encodeURIComponent('704 Interamnia')}`}>
+                <span className="index__name h-l"><Hop>704 Interamnia</Hop></span>
+                <span className="index__kind">An asteroid caught in one exposure on 1 February 2026, then gone</span>
+                <span className="index__move mono">burst 13</span>
+              </Link>
+            </li>
           </ul>
         </div>
       </section>
@@ -52,6 +59,11 @@ export function ViewerRoute({ query, embed = false }: { query: Query; embed?: bo
     det: det >= 1 && det <= 6 ? Math.round(det) : 3,
     mode: (['pass', 'burst', 'single'].includes(mode ?? '') ? mode : 'pass') as Mode,
     diff: sp.get('diff') === '1', gaia: sp.get('gaia') === '1', ends: sp.get('ends') === '1', colour: sp.get('rgb') === '1',
+    plate: Math.max(0, Math.round(Number(sp.get('plate')) || 0)),
+    wise: sp.get('wise') === '1',
+    stack: (['sum', 'shift'].includes(sp.get('stack') ?? '') ? sp.get('stack') : 'none') as Stack,
+    pmRa: Number(sp.get('pmra')) || 0,
+    pmDec: Number(sp.get('pmdec')) || 0,
     // Never faster than 3 swaps a second.
     hold: hold >= 340 && hold <= 2000 ? hold : 700,
   };

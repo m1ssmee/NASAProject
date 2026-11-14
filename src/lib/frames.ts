@@ -391,3 +391,85 @@ export function buildColourEpochs(frames: Frame[], dets: readonly number[] = COL
     };
   }).filter((e) => e.rgb.filter(Boolean).length >= 2); // a colour plate needs at least two channels
 }
+
+/** Shift an n*n image by (dx, dy) output pixels with bilinear resampling. Uncovered pixels are NaN. */
+export function shiftImage(data: Float32Array, n: number, dx: number, dy: number): Float32Array {
+  const out = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) {
+    const sy = j - dy, y0 = Math.floor(sy), fy = sy - y0;
+    for (let i = 0; i < n; i++) {
+      const sx = i - dx, x0 = Math.floor(sx), fx = sx - x0;
+      if (x0 < 0 || y0 < 0 || x0 + 1 >= n || y0 + 1 >= n) { out[j * n + i] = NaN; continue; }
+      const a = data[y0 * n + x0], b = data[y0 * n + x0 + 1], c = data[(y0 + 1) * n + x0], d = data[(y0 + 1) * n + x0 + 1];
+      out[j * n + i] = (1 - fy) * ((1 - fx) * a + fx * b) + fy * ((1 - fx) * c + fx * d);
+    }
+  }
+  return out;
+}
+
+function stackEpoch(frames: Frame[], images: Float32Array[], key: string): Epoch {
+  const sorted = [...frames].sort((a, b) => a.mjd - b.mjd);
+  const waves = sorted.map((f) => f.wave).filter(Number.isFinite);
+  const len = images[0].length;
+  const data = new Float32Array(len);
+  const buf = new Float32Array(images.length);
+  for (let p = 0; p < len; p++) {
+    let c = 0;
+    for (const im of images) { const v = im[p]; if (Number.isFinite(v)) buf[c++] = v; }
+    data[p] = c === 0 ? NaN : c < 3 ? (c === 1 ? buf[0] : (buf[0] + buf[1]) / 2) : median(buf, c);
+  }
+  return {
+    key, mode: 'pass', mjd: sorted.reduce((s, f) => s + f.mjd, 0) / sorted.length,
+    mjdMin: sorted[0].mjd, mjdMax: sorted[sorted.length - 1].mjd,
+    data, frames: sorted, waveMin: Math.min(...waves), waveMax: Math.max(...waves),
+  };
+}
+
+/** Add everything together: one deep plate from every exposure. Fixed stars sharpen; movers smear or vanish. */
+export function sumAll(frames: Frame[]): Epoch {
+  return stackEpoch(frames, frames.map((f) => f.data), `sum:${frames.length}`);
+}
+
+/**
+ * Shift-and-add: slide each exposure back along a trial proper motion before stacking, so an
+ * object moving at that rate lands on the same pixel every time and adds up, while the fixed
+ * stars smear. pmRa (already times cos dec) and pmDec are in arcseconds per year.
+ */
+export function shiftAdd(frames: Frame[], grid: Grid, pmRa: number, pmDec: number): Epoch {
+  const ref = frames.reduce((s, f) => s + f.mjd, 0) / frames.length;
+  const images = frames.map((f) => {
+    const years = (f.mjd - ref) / 365.25;
+    // East is left, north is up: motion east moves a source to smaller x, north to smaller y.
+    const moved = { x: (-pmRa * years) / grid.scale, y: (-pmDec * years) / grid.scale };
+    return shiftImage(f.data, grid.n, -moved.x, -moved.y);
+  });
+  return stackEpoch(frames, images, `shift:${pmRa}:${pmDec}:${frames.length}`);
+}
+
+/**
+ * Brightness of a star whose core has overflowed the detector, measured from its halo: the
+ * light in a ring 3 to 6 detector pixels out, minus the sky further out. The halo is a fixed
+ * fraction of the star's light, so this follows changes in brightness, but it is a relative
+ * measure and not a calibrated flux. Returned in the same units as aperture() for plotting.
+ */
+export function haloFlux(data: Float32Array, grid: Grid, cx: number, cy: number): number {
+  const n = grid.n;
+  const px = NATIVE_SCALE / grid.scale;
+  const half = Math.min(cx, cy, n - 1 - cx, n - 1 - cy);
+  const r1 = 3 * px, r2 = 6 * px;
+  const s1 = Math.min(9 * px, half * 0.8), s2 = Math.min(11.5 * px, half * 0.98);
+  if (s1 <= r2 || s2 - s1 < 1) return NaN;
+  const sky: number[] = [];
+  let sum = 0, count = 0;
+  for (let j = Math.max(0, Math.floor(cy - s2)); j <= Math.min(n - 1, Math.ceil(cy + s2)); j++) {
+    for (let i = Math.max(0, Math.floor(cx - s2)); i <= Math.min(n - 1, Math.ceil(cx + s2)); i++) {
+      const v = data[j * n + i];
+      if (!Number.isFinite(v)) continue;
+      const r = Math.hypot(i - cx, j - cy);
+      if (r >= r1 && r <= r2) { sum += v; count++; } else if (r >= s1 && r <= s2) sky.push(v);
+    }
+  }
+  if (count < 20 || sky.length < 20) return NaN;
+  const srPerPixel = (grid.scale * 4.84813681e-6) ** 2;
+  return (sum - median(sky) * count) * 1e9 * srPerPixel;
+}

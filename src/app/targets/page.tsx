@@ -21,7 +21,7 @@ export default function Targets() {
           {targets.map((t) => (
             <li key={t.slug}>
               <Link href={`/targets/${t.slug}`} className="tindex__row">
-                <BakedPlate slug={t.slug} size={48} edge={false} alt={`SPHEREx plate of ${t.name}, blinking between two passes`} />
+                <BakedPlate slug={t.slug} colour size={48} edge={false} alt={`SPHEREx plate of ${t.name}, blinking between two passes`} />
                 <span>
                   <span className="h-l"><Hop>{t.name}</Hop></span>
                   <span className="tindex__kind">{t.kind}</span>

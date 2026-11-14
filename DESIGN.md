@@ -189,3 +189,24 @@ single-detector tools and are disabled while colour is on. A pass with no exposu
 detector fills that channel with the average of the other two and says so on the plate; a pixel
 with no data in any channel is grey. Off by default: it loads about three times as much.
 URL parameter `rgb=1`; key C.
+
+## Revision 10: closing the gaps against the brief
+
+- **Brightness over time.** Aperture photometry on every loaded exposure at the centre or the
+  mark, with plate medians joined. Stars that overflow the detector are measured from their halo
+  (relative only) and the chart says so. Verified: R Draconis rises nearly sixfold into
+  September 2026; RW Aurigae changes by about a fifth between passes.
+- **Contamination flags.** The FLAGS layer is Rice-compressed one detector row per tile, so one
+  row can be range-read and decoded in the browser (`src/lib/flags.ts`). Verified against real
+  files: decoded rows reproduce the header's own flag statistics.
+- **Add all, and shift-and-add** with a typed motion or the fastest Gaia star's.
+- **WISE overlay** (AllWISE positions from about 2010) alongside Gaia.
+- **Animated export** as a looping GIF with dates, encoded in the browser (`src/lib/gif.ts`).
+- **Candidate report**: copyable text with coordinates, plates and links, and a pointer to the
+  Backyard Worlds discussion board.
+- **A fast mover, tested.** JPL Horizons put asteroid 704 Interamnia at 216.79261, -32.51587 at
+  the moment of one exposure on 1 February 2026; the viewer shows a bright source there in that
+  exposure and in no other. It is the sixth example on the viewer's start page.
+- **Colour plates on the site.** The baked plates on the home, targets and target pages now use
+  the three-detector colour version; the two difference views stay grey because a difference has
+  no colour.

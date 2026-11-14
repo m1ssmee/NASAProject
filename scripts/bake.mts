@@ -10,7 +10,8 @@ import zlib from 'node:zlib';
 import { siaUrl } from '../src/config/releases';
 import { targets, targetNow } from '../src/data/targets';
 import { isoDate } from '../src/lib/astro';
-import { buildEpochs, displayLimits, loadFrame, makeGrid, parseSia, pool, stretch, thin, type Frame } from '../src/lib/frames';
+import { buildColourEpochs, buildEpochs, COLOUR_DETS, displayLimits, loadFrame, makeGrid, parseSia, pool, stretch, thin, type Frame } from '../src/lib/frames';
+import { rgbaFromChannels } from '../src/lib/render';
 
 const args = process.argv.slice(2);
 const pv = args.indexOf('--preview');
@@ -66,9 +67,33 @@ for (const t of targets) {
   const bin = new Float32Array(grid.n * grid.n * epochs.length);
   epochs.forEach((e, i) => bin.set(e.data, i * grid.n * grid.n));
   fs.writeFileSync(path.join(outDir, `${t.slug}.bin`), Buffer.from(bin.buffer));
+  // Colour version: the first and latest pass from three detectors, stored as finished 8-bit RGB.
+  const cFrames: Frame[] = [];
+  const cRecords = COLOUR_DETS.flatMap((d) => thin(records.filter((r) => r.det === d), 60));
+  await pool(cRecords, 10, (r) => loadFrame(r, grid), (f) => { if (f) cFrames.push(f); });
+  const cEpochs = buildColourEpochs(cFrames);
+  let rgbMeta: { from: string; to: string; mjd: number; missing: number[] }[] | null = null;
+  if (cEpochs.length >= 2) {
+    const ends = [cEpochs[0], cEpochs[cEpochs.length - 1]];
+    const cLimits = [0, 1, 2].map((c) => {
+      const imgs = cEpochs.map((e) => e.rgb![c]).filter((x): x is Float32Array => !!x);
+      return imgs.length ? displayLimits(imgs) : null;
+    });
+    const size = grid.n * grid.n;
+    const rgb = new Uint8Array(size * 3 * ends.length);
+    ends.forEach((e, k) => {
+      const rgba = rgbaFromChannels(e.rgb!, grid.n, cLimits);
+      for (let i = 0; i < size; i++) rgb.set([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]], k * size * 3 + i * 3);
+    });
+    fs.writeFileSync(path.join(outDir, `${t.slug}-rgb.bin`), Buffer.from(rgb.buffer));
+    rgbMeta = ends.map((e) => ({ from: isoDate(e.mjdMin), to: isoDate(e.mjdMax), mjd: e.mjd, missing: e.missing ?? [] }));
+    console.log(`   colour: ${cFrames.length} exposures, ${cEpochs.length} passes, kept first and last${rgbMeta.some((m) => m.missing.length) ? ' (a detector is missing in one)' : ''}`);
+  }
+
   fs.writeFileSync(path.join(outDir, `${t.slug}.json`), JSON.stringify({
     slug: t.slug, ra: pos.ra, dec: pos.dec, n: grid.n, scale: grid.scale, det, limits,
     epochs: epochs.map((e) => ({ mjd: e.mjd, from: isoDate(e.mjdMin), to: isoDate(e.mjdMax), count: e.frames.length, waveMin: e.waveMin, waveMax: e.waveMax })),
+    rgb: rgbMeta,
     baked: new Date().toISOString().slice(0, 10),
   }));
 

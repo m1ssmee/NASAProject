@@ -108,7 +108,7 @@ export default async function Home() {
             <h3 className="read__name h-l">It is not real</h3>
             <p className="read__text">Bright stars overflow the detector and leave grey holes, rings and spikes. Cosmic rays mark one exposure and never return. If it shows up once, or sits exactly on a bright star, leave it.</p>
             <figure className="read__pic">
-              <BakedPlate slug="r-draconis" size={48} alt="SPHEREx image of the bright star R Draconis with a blank, overflowed centre and a wide halo, blinking between two passes." />
+              <BakedPlate slug="r-draconis" colour size={48} alt="Colour SPHEREx image of the bright star R Draconis with a grey, overflowed centre and a wide halo, blinking between two passes." />
               <figcaption>R Draconis, saturated core</figcaption>
             </figure>
           </div>

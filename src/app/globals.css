@@ -739,3 +739,19 @@ html.sky-full .sky__tools { top: var(--gutter); }
 .swatch--r { background: #ff4a3d; }
 .seg button[disabled] { opacity: 0.4; cursor: default; }
 .check:has(input[disabled]) { opacity: 0.5; cursor: default; }
+
+/* Viewer: WISE overlay, shift-and-add inputs, flag list */
+.wise { fill: none; stroke: #36a8ff; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.pm { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.pm label { display: grid; gap: 0.25rem; font-size: var(--t-xs); color: var(--c-muted); }
+.pm input { height: 2.5rem; padding: 0 0.6rem; border: 1px solid var(--c-fg); background: transparent; font-family: var(--f-mono); font-size: 0.875rem; width: 100%; min-width: 0; }
+.pm input:hover { border-color: var(--c-mark); }
+.flags { border-top: 1px solid var(--c-line); }
+.flags li { display: grid; grid-template-columns: 1fr auto; gap: 0.1rem 0.75rem; padding-block: 0.45rem; border-bottom: 1px solid var(--c-line); font-size: var(--t-s); }
+.flags b { font-family: var(--f-mono); font-size: 0.8125rem; font-weight: 500; }
+.flags span { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--c-muted); }
+.flags i { grid-column: 1 / -1; font-style: normal; font-size: var(--t-xs); color: var(--c-muted); }
+.flags li.is-bad b { color: var(--c-accent); }
+
+/* Colour baked plates are light on dark, so their caption strip follows suit. */
+.plate--colour { --c-bg: var(--emulsion); --c-fg: var(--glass); --c-muted: #a3a9ad; --c-accent: #ff6a52; }

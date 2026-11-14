@@ -23,6 +23,7 @@ If Node reports `unable to get local issuer certificate` when the app calls IRSA
 - `/view?ra=133.75976&dec=-7.24219` opens the viewer. Optional: `fov` (120, 300, 600, 1200 arcsec),
   `det` (1 to 6), `mode` (`pass`, `burst`, `single`), `rgb=1` (colour from three detectors), `diff=1`, `ends=1`, `gaia=1`, `hold` (ms), `name`.
 - `/embed?...` takes the same parameters and has no site navigation, for iframes.
+- More viewer parameters: `wise=1` (AllWISE overlay), `stack=sum` or `stack=shift&pmra=..&pmdec=..` (arcseconds a year), `plate=N` (open paused on plate N).
 - Keys in the viewer: space plays, arrows step, 1 to 6 pick a detector, C switches colour, D subtracts the first plate.
 
 ## How it works

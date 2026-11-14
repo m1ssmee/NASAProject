@@ -56,7 +56,8 @@ export default function Method() {
             <p>A SPHEREx pixel is 6.15 arcseconds across. With about eighteen months of data, only objects moving faster than roughly three arcseconds a year shift far enough to see. Barnard&rsquo;s Star moves about two and a half pixels; Epsilon Indi B about one.</p>
             <p>Catalogues give positions for the year 2000. Names typed into the search box are moved forward by their proper motion before images are requested. Coordinates you type are used exactly as given.</p>
             <p>Grey patches mean no data: an overflowed star core or a masked pixel. The median stack removes most cosmic rays but also removes anything that moves within a pass, which is what burst mode is for. Photometry is a simple aperture measurement on resampled pixels and is meant for spotting spectral shapes, not for publication.</p>
-            <p>The archive&rsquo;s contamination flags are stored in a compressed layout that cannot be read a few rows at a time. The viewer links each exposure to the archive, where the flags can be inspected in full.</p>
+            <p>Every SPHEREx image carries a layer of contamination flags, one set per pixel. The viewer can read them for any spot in the plate on screen and tells you how many exposures marked that pixel as overflowed, hit by a cosmic ray, sitting on a ghost, and so on. A flag named SOURCE only means the pixel is on a catalogued star.</p>
+            <p>Add all stacks every exposure into one deep plate. Shift and add first slides each exposure back along a motion you type in, so an object moving at that rate piles up into a point while the fixed stars smear. The brightness chart measures a small circle around the centre or your mark in every exposure; for stars that overflow the detector it measures the halo instead and says so.</p>
           </div>
         </div>
         <hr className="rule" />
