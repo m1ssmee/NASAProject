@@ -47,10 +47,12 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     let created: Sky | null = null;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const el = host.current!, cv = canvas.current!;
+    // While the opening plays the canvas covers the whole window, so it is measured against that.
+    let fullscreen = false;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      view.current.width = Math.max(1, Math.round(r.width));
-      view.current.height = Math.max(1, Math.round(r.height));
+      view.current.width = Math.max(1, Math.round(fullscreen ? innerWidth : r.width));
+      view.current.height = Math.max(1, Math.round(fullscreen ? innerHeight : r.height));
       dirty.current = true;
     };
     measure();
@@ -99,8 +101,8 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     let frame = 0;
     const tick = (time: number) => {
       const s = sky.current;
-      if (!s || !visible || document.hidden) return;
-      if (light && !dirty.current && frame++ % 2) return;
+      if (!s || (!visible && !fullscreen) || document.hidden) return;
+      if (light && !fullscreen && !dirty.current && frame++ % 2) return;
       const v = view.current;
       // Idle: the sky turns very slowly until someone touches it.
       if (!light && !reduced && !intro?.isActive() && !pickRef.current && time - touched.current > 4) {
@@ -127,8 +129,9 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         dirty.current = true;
         gsap.ticker.add(tick);
         setState('ready');
-        intro = playIntro(created, view.current, reduced, () => { dirty.current = true; });
+        intro = playIntro(created, reduced, (full) => { fullscreen = full; measure(); });
       } catch {
+        endIntro();
         if (!dead) setState('nogl');
       }
     })();
@@ -139,7 +142,8 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       io.disconnect();
       gsap.ticker.remove(tick);
       intro?.kill();
-      document.documentElement.classList.remove('intro-running');
+      // Lift the veil if the map is really gone (leaving the page), not on a development re-mount.
+      setTimeout(() => { if (!document.querySelector('.sky')) endIntro(); }, 60);
       created?.dispose();
       sky.current = null;
     };
@@ -305,45 +309,74 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   );
 }
 
-/** The opening: SPHEREx heads out, the stars spread as if you were following it. Once per session. */
-function playIntro(sky: Sky, view: View, reduced: boolean, touch: () => void): gsap.core.Timeline | null {
-  let seen = true;
-  try { seen = sessionStorage.getItem('intro') === '1'; sessionStorage.setItem('intro', '1'); } catch { /* private mode */ }
-  if (reduced || seen) return null;
-  const html = document.documentElement;
-  const mark = document.querySelector<HTMLElement>('.wordmark__craft');
-  const { craft, craftCamera } = sky;
-  const end = view.fov;
-  const s = { fov: Math.min(150, end * 2.3) };
-  // Where the header mark sits, as a direction from the craft camera, so the craft flies to it.
-  const r = mark?.getBoundingClientRect();
-  const nx = r ? ((r.left + r.width / 2) / view.width) * 2 - 1 : -0.9;
-  const ny = r ? 1 - ((r.top + r.height / 2) / Math.max(1, innerHeight)) * 2 : 0.9;
-  const depth = 46;
-  const halfH = Math.tan((craftCamera.fov * Math.PI) / 360) * depth;
-  const target = { x: nx * halfH * craftCamera.aspect, y: Math.min(ny, 1.4) * halfH };
+/** Lift the dark veil that the page starts under (set by the inline script in the layout). */
+function endIntro() {
+  document.documentElement.classList.remove('intro-pending', 'intro-veil');
+}
 
-  html.classList.add('intro-running');
+/**
+ * The opening. The page loads fully dark with a few stars twinkling; SPHEREx appears, wanders
+ * along a path that is different every time, settles into the header as the logo mark, and
+ * then the site fades in. Plays when the home page is loaded directly; any click, key or scroll
+ * skips it; never under reduced motion.
+ */
+function playIntro(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => void): gsap.core.Timeline | null {
+  const html = document.documentElement;
+  if (reduced || !html.classList.contains('intro-pending')) { endIntro(); return null; }
+  const { craft, craftCamera } = sky;
+  setFullscreen(true);
+  sky.setStars(0);
+
+  // Screen position to a point in front of the craft camera at a given depth.
+  const at = (nx: number, ny: number, depth: number) => {
+    const halfH = Math.tan((craftCamera.fov * Math.PI) / 360) * depth;
+    return { x: nx * halfH * (innerWidth / innerHeight), y: ny * halfH, z: -depth };
+  };
+  const mark = document.querySelector<HTMLElement>('.wordmark__craft')?.getBoundingClientRect();
+  const end = at(
+    mark ? ((mark.left + mark.width / 2) / innerWidth) * 2 - 1 : -0.94,
+    mark ? 1 - ((mark.top + mark.height / 2) / innerHeight) * 2 : 0.94,
+    64,
+  );
+  // A different wander each time: start somewhere in the lower right, swing through two random
+  // points, then home in on the logo.
+  const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+  const start = at(rnd(0.15, 0.7), rnd(-0.6, -0.1), 15);
+  const mid1 = at(rnd(-0.55, 0.1), rnd(-0.35, 0.5), 19);
+  const mid2 = at(rnd(0.0, 0.6), rnd(0.05, 0.65), 27);
+
   sky.showCraft(true);
-  craft.position.set(1.6, 0.5, -10.5);
-  view.fov = s.fov;
+  craft.position.set(start.x, start.y, start.z);
+  craft.scale.setScalar(0.001);
+  const spin = { x: craft.rotation.x, y: craft.rotation.y, z: craft.rotation.z };
+
+  let done = false;
   const finish = () => {
-    view.fov = end;
-    sky.showCraft(false);
-    html.classList.remove('intro-running');
-    touch();
+    if (done) return;
+    done = true;
     off();
+    sky.showCraft(false);
+    craft.scale.setScalar(1);
+    craft.rotation.set(spin.x, spin.y, spin.z);
+    setFullscreen(false);
+    html.classList.remove('intro-pending'); // canvas returns to its place, still under the veil
+    const stars = { a: 0 };
+    gsap.to(stars, { a: 1, duration: 0.9, ease: 'power2.out', onUpdate: () => sky.setStars(stars.a) });
+    requestAnimationFrame(() => html.classList.remove('intro-veil')); // the site fades in
   };
   const tl = gsap.timeline({ onComplete: finish })
-    .to(s, { fov: end, duration: 2.3, ease: 'expo.out', onUpdate: () => { view.fov = s.fov; touch(); } }, 0)
-    .to(craft.rotation, { y: craft.rotation.y + 1.1, z: craft.rotation.z + 0.5, duration: 2.4, ease: 'power1.out' }, 0)
-    .to(craft.position, { z: -depth, duration: 2.3, ease: 'power2.in' }, 0.1)
-    .to(craft.position, { x: target.x, y: target.y, duration: 1.3, ease: 'power2.inOut' }, 1.1)
-    .to(craft.scale, { x: 0.6, y: 0.6, z: 0.6, duration: 0.4, ease: 'power2.in' }, 2.0);
-  const skip = () => { tl.progress(1); };
-  const off = () => { removeEventListener('pointerdown', skip); removeEventListener('keydown', skip); removeEventListener('wheel', skip); };
+    .to({}, { duration: 0.9 }) // dark, stars twinkling
+    .to(craft.scale, { x: 1, y: 1, z: 1, duration: 0.55, ease: 'back.out(1.6)' })
+    .to(craft.position, { ...mid1, duration: 0.8, ease: 'sine.inOut' }, '<0.1')
+    .to(craft.position, { ...mid2, duration: 0.8, ease: 'sine.inOut' })
+    .to(craft.position, { ...end, duration: 0.95, ease: 'power2.inOut' })
+    .to(craft.scale, { x: 0.75, y: 0.75, z: 0.75, duration: 0.5, ease: 'power2.in' }, '<0.45')
+    .to(craft.rotation, { y: spin.y + 2.6, z: spin.z + 0.9, x: spin.x - 0.35, duration: 2.6, ease: 'none' }, 0.9);
+  const skip = () => { tl.kill(); finish(); };
+  const off = () => { removeEventListener('pointerdown', skip); removeEventListener('keydown', skip); removeEventListener('wheel', skip); removeEventListener('touchstart', skip); };
   addEventListener('pointerdown', skip, { once: true });
   addEventListener('keydown', skip, { once: true });
   addEventListener('wheel', skip, { once: true, passive: true });
+  addEventListener('touchstart', skip, { once: true, passive: true });
   return tl;
 }

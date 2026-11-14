@@ -110,3 +110,15 @@ from SIMBAD, without distance.
 
 Phone: the map is 46 svh so the headline, search box and button share the first screen with it;
 the render loop runs at half rate with no idle drift, to keep page scrolling smooth.
+
+## Revision 3: the opening, as directed by the owner
+
+The home page now loads fully dark with three stars twinkling (positions random per load).
+SPHEREx appears, wanders through two random points, and settles into the header as the logo
+mark; then the whole site fades in. About 3.3 s after the 3D code is ready. It plays on every
+direct load of the home page, is skipped by any click, key, scroll or touch, and never plays
+under reduced motion. An inline script sets the veil before first paint and removes it after
+8 s whatever happens, so a failed 3D load cannot leave the page dark.
+
+This is longer than the 2.6 s the skill recommends for an opening, and the site is not visible
+until it ends. That is a deliberate choice by the owner for the hackathon presentation.

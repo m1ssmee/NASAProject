@@ -518,7 +518,7 @@ body:not(:has(.site-header)) #curtain { top: 0; }
 /* Header: the spacecraft mark. Hidden while the real one is flying to this spot. */
 .wordmark__craft { width: 22px; height: 22px; flex: none; }
 .wordmark__craft path, .wordmark__craft line { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
-html.intro-running .wordmark__craft { opacity: 0; }
+html.intro-pending .wordmark__craft { opacity: 0; }
 .wordmark:hover .wordmark__craft, .wordmark:focus-visible .wordmark__craft { color: var(--c-mark); rotate: -18deg; }
 
 /* New this week */
@@ -556,3 +556,26 @@ html.intro-running .wordmark__craft { opacity: 0; }
   .skyhero__over { padding-top: 1rem; row-gap: 0.75rem; }
   .skyhero__hint { display: none; }
 }
+
+/* ───────── The opening ─────────
+   intro-veil: the whole site sits under a dark veil. intro-pending: the sky canvas is lifted
+   above the veil and fills the window, so the spacecraft can cross the page to the logo. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 96; background: var(--emulsion); pointer-events: none;
+  opacity: 0; visibility: hidden; transition: opacity 0.9s ease, visibility 0s linear 0.9s;
+}
+html.intro-veil body::before { opacity: 1; visibility: visible; transition: none; }
+html.intro-pending #main { z-index: auto; }
+html.intro-pending .sky { overflow: visible; }
+html.intro-pending .sky__canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 97; opacity: 1; pointer-events: none; }
+html.intro-pending .sky[data-state='loading'] .sky__canvas { opacity: 0; }
+#twinkle { position: fixed; inset: 0; z-index: 98; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.6s ease, visibility 0s linear 0.6s; }
+html.intro-veil #twinkle { opacity: 1; visibility: visible; transition: none; }
+#twinkle i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--glass); box-shadow: 0 0 6px 1px rgb(231 233 230 / 0.7); }
+#twinkle i:nth-child(1) { left: var(--tw1x, 22vw); top: var(--tw1y, 30vh); }
+#twinkle i:nth-child(2) { left: var(--tw2x, 68vw); top: var(--tw2y, 22vh); width: 2px; height: 2px; }
+#twinkle i:nth-child(3) { left: var(--tw3x, 54vw); top: var(--tw3y, 64vh); width: 4px; height: 4px; }
+@keyframes twinkle { 0%, 100% { opacity: 0.15; scale: 0.7; } 50% { opacity: 1; scale: 1.5; } }
+html.intro-veil #twinkle i { animation: twinkle 1.5s ease-in-out infinite; }
+html.intro-veil #twinkle i:nth-child(2) { animation-duration: 1.1s; animation-delay: -0.4s; }
+html.intro-veil #twinkle i:nth-child(3) { animation-duration: 1.9s; animation-delay: -0.9s; }

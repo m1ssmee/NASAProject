@@ -13,6 +13,7 @@ uniform float uTime;
 uniform float uDpr;
 uniform float uZoom;
 uniform float uShine;
+uniform float uStars;
 attribute float aMag;
 attribute float aBv;
 attribute float aNote;
@@ -38,7 +39,7 @@ void main() {
   vec3 cool = vec3(0.74, 0.82, 1.0), white = vec3(1.0, 0.98, 0.95), warm = vec3(1.0, 0.76, 0.56);
   float t = clamp((aBv + 0.2) / 1.9, 0.0, 1.0);
   vColor = t < 0.4 ? mix(cool, white, t / 0.4) : mix(white, warm, (t - 0.4) / 0.6);
-  vAlpha = min(1.0, 0.5 + 0.75 * b + 0.5 * glow);
+  vAlpha = min(1.0, 0.5 + 0.75 * b + 0.5 * glow) * uStars;
 }`;
 
 const fragment = /* glsl */ `
@@ -57,6 +58,8 @@ export interface Sky {
   setView(v: View): void;
   /** 0 = no shining (reduced motion), 1 = normal. */
   setShine(s: number): void;
+  /** Overall star brightness, 0 to 1 (the opening fades the sky in). */
+  setStars(a: number): void;
   craft: THREE.Group;
   craftCamera: THREE.PerspectiveCamera;
   showCraft(on: boolean): void;
@@ -114,6 +117,7 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
     uDpr: { value: dpr },
     uZoom: { value: 1 },
     uShine: { value: 1 },
+    uStars: { value: 1 },
   };
   const material = new THREE.ShaderMaterial({
     vertexShader: vertex, fragmentShader: fragment, uniforms,
@@ -155,6 +159,7 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
       uniforms.uZoom.value = Math.min(2.2, Math.max(0.85, Math.sqrt(60 / v.fov)));
     },
     setShine(s) { uniforms.uShine.value = s; },
+    setStars(a) { uniforms.uStars.value = a; },
     showCraft(on) { craft.visible = on; },
     render(time) {
       uniforms.uTime.value = time;

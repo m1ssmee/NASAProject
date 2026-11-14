@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 const url = process.argv[2] ?? 'http://127.0.0.1:4400/';
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
-await p.addInitScript(() => { try { sessionStorage.setItem('intro', '1'); } catch {} });
+await p.addInitScript(() => { try { sessionStorage.setItem('intro', 'off'); } catch {} });
 await p.goto(url, { waitUntil: 'networkidle' });
 await p.waitForTimeout(1500);
 // Only the stars: hide everything drawn over the canvas, and the still itself.
