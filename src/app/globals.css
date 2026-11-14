@@ -775,3 +775,26 @@ html.sky-full .sky__tools { top: var(--gutter); }
 .report__go { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .report input[type='radio'] { appearance: none; width: 1.05rem; height: 1.05rem; border: 1.5px solid var(--c-fg); border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
 .report input[type='radio']:checked::after { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--c-mark); }
+
+/* ───────── Sky map: constellations and star names (full screen) ───────── */
+.sky__sname { margin: -0.5rem 0 0 11px; white-space: nowrap; font-size: 0.6875rem; letter-spacing: 0.02em; color: rgb(231 233 230 / 0.78); text-shadow: 0 0 6px var(--emulsion), 0 0 2px var(--emulsion); transition: opacity 0.4s ease; }
+.sky__sname[data-tier='2'] { opacity: 0; }
+.sky[data-near] .sky__sname[data-tier='2'] { opacity: 1; }
+.sky__con { transform: translate(-50%, -50%); white-space: nowrap; font-family: var(--f-mono); font-size: 0.6875rem; color: rgb(170 198 255 / 0.95); text-shadow: 0 0 8px var(--emulsion), 0 0 3px var(--emulsion); opacity: 0; transition: opacity 0.5s ease; }
+.sky__con.is-on { opacity: 1; }
+.sky__con b { font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+.sky__con i { font-style: normal; }
+.sky__con--active { font-size: 0.8125rem; color: var(--glass); }
+.sky[data-lines] .sky__con--active { display: none; }
+.sky__found { position: absolute; left: var(--gutter); bottom: 3.4rem; z-index: 2; pointer-events: none; font-family: var(--f-mono); font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--glass); text-shadow: 0 0 8px var(--emulsion); }
+.sky[data-filling] .sky__found { opacity: 0; }
+.sky__tools .sky__linesbtn { grid-column: 1 / -1; width: auto; border-right: 0; border-top: 1px solid rgb(231 233 230 / 0.25); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; }
+/* The wide buttons carry their own top rule, so the row above each drops its bottom rule. */
+.sky__tools .sky__linesbtn { border-bottom: 0; }
+.sky__tools button:has(+ .sky__linesbtn), .sky__tools button:has(+ button + .sky__linesbtn):not(.sky__linesbtn) { border-bottom: 0; }
+.sky__tools .sky__linesbtn[aria-pressed='true'] { background: var(--glass); color: var(--emulsion); }
+@media (max-width: 640px) { .sky__found { bottom: 1.25rem; } }
+/* Full screen: a deep blue-black ground under the Milky Way. */
+html.sky-full .sky { background-color: #05070d; }
+.sky__con--active i::before { content: ', '; }
+@media (max-width: 640px) { .sky__con--active { text-align: center; } .sky__con--active i { display: block; font-size: 0.6875rem; } .sky__con--active i::before { content: none; } }

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { notedStars, viewerHref, type NotedStar } from '@/data/stars';
 import { startScroll, stopScroll } from '@/engine';
 import { formatDec, formatRa } from '@/lib/astro';
+import { chooseFigure, constellationAt, figureNear, makeAtlas, type Atlas } from '@/sky/constellations';
 import { FOV_MAX, FOV_MIN, pan, toScreen, toSky, type View } from '@/sky/project';
 import type { Sky } from '@/sky/scene';
 import { OPEN_FULL_SKY } from './FullSkyLink';
@@ -20,6 +21,24 @@ type Pick =
 
 const START = { ra: 262, dec: 8, fov: 62 }; // Ophiuchus, with Barnard's Star near the middle
 const FIELD_DEG = 3.5; // one SPHEREx exposure covers 3.5 degrees
+const ALL_LINES = 0.4; // brightness of the figures when the "Lines" switch shows all of them
+
+// Constellations this visitor has come across, kept between visits.
+const FOUND_KEY = 'constellations';
+function readFound(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(FOUND_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
+  } catch { return []; }
+}
+function remember(id: string): number {
+  const got = readFound();
+  if (!got.includes(id)) {
+    got.push(id);
+    try { localStorage.setItem(FOUND_KEY, JSON.stringify(got)); } catch { /* private mode: count this visit only */ }
+  }
+  return got.length;
+}
 
 export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const router = useRouter();
@@ -38,14 +57,87 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const [full, setFullState] = useState(false);
   const fullRef = useRef(false);
   const fillTween = useRef<gsap.core.Tween | null>(null);
+  const glowTween = useRef<gsap.core.Tween | null>(null);
   const readout = useRef<HTMLParagraphElement>(null);
+  const drag = useRef<{ x: number; y: number; moved: number; id: number } | null>(null);
+
+  // Constellations (full screen only): the figures, which one is playing, what has been found.
+  const atlasRef = useRef<Atlas | null>(null);
+  const [atlas, setAtlas] = useState<Atlas | null>(null);
+  const [linesOn, setLinesOn] = useState(false);
+  const [found, setFound] = useState(0);
+  const lineState = useRef({ active: -1, draw: 0, alpha: 0, all: 0 });
+  const seen = useRef(new Set<number>());
+  const playing = useRef<gsap.core.Timeline | null>(null);
+  const nextAt = useRef(0);
+  const conLabel = useRef<HTMLSpanElement>(null);
+  const hover = useRef<{ fig: number; timer: ReturnType<typeof setTimeout> | null }>({ fig: -1, timer: null });
+
+  // Coming across a constellation: its lines draw themselves star to star, the finished
+  // figure blinks twice with its name beside it, and then it fades back into the plain sky.
+  const playFigure = useCallback((idx: number) => {
+    const s = sky.current, a = atlasRef.current;
+    if (!s || !a || playing.current || !fullRef.current) return;
+    const fig = a.list[idx], L = lineState.current, label = conLabel.current;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const apply = () => s.setLines(L);
+    const name = () => {
+      setFound(remember(fig.id));
+      if (!label) return;
+      label.children[0].textContent = fig.name;
+      label.children[1].textContent = fig.meaning;
+      label.dataset.ra = String(fig.ra);
+      label.dataset.dec = String(fig.dec);
+      label.classList.add('is-on');
+      dirty.current = true;
+    };
+    const unname = () => label?.classList.remove('is-on');
+    seen.current.add(idx);
+    L.active = idx; L.draw = reduced ? 1.03 : 0; L.alpha = reduced ? 0.7 : 1;
+    const segments = fig.lines.reduce((n, l) => n + l.length / 2 - 1, 0);
+    const wait = (d: number) => [{}, { duration: d }] as const;
+    const tl = gsap.timeline({
+      onUpdate: apply,
+      onComplete: () => { L.active = -1; L.alpha = 0; apply(); playing.current = null; nextAt.current = gsap.ticker.time + 0.9; },
+    });
+    if (reduced) tl.call(name).to(...wait(2.6)).call(unname);
+    else {
+      tl.to(L, { draw: 1.03, duration: Math.min(1.8, 0.8 + segments * 0.035), ease: 'power1.inOut' })
+        .call(name)
+        .to(...wait(0.3))
+        .set(L, { alpha: 0 }).to(...wait(0.13)) // blink
+        .set(L, { alpha: 1 }).to(...wait(0.24))
+        .set(L, { alpha: 0 }).to(...wait(0.13)) // blink
+        .set(L, { alpha: 1 }).to(...wait(1.3))
+        .call(unname)
+        .to(L, { alpha: 0, duration: 0.8, ease: 'power2.out' });
+    }
+    playing.current = tl;
+  }, []);
+
   // Where the pointer is on the sky, written straight to the readout (no re-render per move).
   const track = (e: React.PointerEvent) => {
     const out = readout.current, el = host.current;
     if (!out || !el) return;
     const r = el.getBoundingClientRect();
-    const s = toSky(view.current, e.clientX - r.left, e.clientY - r.top);
-    out.textContent = `${formatRa(s.ra, 1)}  ${formatDec(s.dec, 0)}   ${s.ra.toFixed(3)}\u00b0 ${s.dec >= 0 ? '+' : '\u2212'}${Math.abs(s.dec).toFixed(3)}\u00b0`;
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const s = toSky(view.current, x, y);
+    const a = atlasRef.current;
+    const where = a ? `   ${a.fullNames[constellationAt(a, s.ra, s.dec)]}` : '';
+    out.textContent = `${formatRa(s.ra, 1)}  ${formatDec(s.dec, 0)}   ${s.ra.toFixed(3)}\u00b0 ${s.dec >= 0 ? '+' : '\u2212'}${Math.abs(s.dec).toFixed(3)}\u00b0${where}`;
+    // Resting the pointer on a star of a figure plays that figure again.
+    if (!a || e.pointerType !== 'mouse') return;
+    const h = hover.current;
+    const fig = drag.current ? -1 : figureNear(a, view.current, x, y);
+    if (fig === h.fig) return;
+    if (h.timer) clearTimeout(h.timer);
+    h.fig = fig;
+    // If another figure is mid-play, wait for it: the pointer is still resting here.
+    const arm = (wait: number) => setTimeout(() => {
+      if (h.fig !== fig) return;
+      if (playing.current) h.timer = arm(400); else playFigure(fig);
+    }, wait);
+    h.timer = fig >= 0 ? arm(350) : null;
   };
 
   const setPick = useCallback((p: Pick | null) => { pickRef.current = p; setPickState(p); dirty.current = true; }, []);
@@ -119,7 +211,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     let intro: gsap.core.Timeline | null = null;
     // Phones get a lighter loop: half the frame rate and no idle drift, so page scrolling stays smooth.
     const light = matchMedia('(max-width: 767px), (pointer: coarse)').matches;
-    let frame = 0;
+    let frame = 0, scan = 0;
     const tick = (time: number) => {
       const s = sky.current;
       if (!s || (!visible && !fullscreen) || document.hidden) return;
@@ -130,7 +222,13 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         v.ra = (v.ra + 0.004) % 360;
         dirty.current = true;
       }
-      if (dirty.current) { s.setView(v); place(); dirty.current = false; }
+      if (dirty.current) { s.setView(v); place(); el.toggleAttribute('data-near', v.fov < 45); dirty.current = false; }
+      // In full screen, a few times a second: has the visitor come across a constellation?
+      const a = atlasRef.current;
+      if (a && fullRef.current && !playing.current && !pickRef.current && el.dataset.filling === undefined && time > nextAt.current && scan++ % 12 === 0) {
+        const idx = chooseFigure(a, v, seen.current);
+        if (idx >= 0) playFigure(idx);
+      }
       s.render(time);
     };
 
@@ -144,6 +242,12 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         created = createSky(cv, new Float32Array(buf), notedStars);
         sky.current = created;
         created.setShine(reduced ? 0 : 1);
+        // If the renderer is rebuilt while full screen is open, give it back what full screen shows.
+        if (fullRef.current) {
+          created.loadMilkyWay('/sky/milkyway.webp');
+          created.setGlow(1);
+          if (atlasRef.current) { created.setFigures(atlasRef.current.list); created.setLines(lineState.current); }
+        }
         // Snap marker positions to the catalogue dots.
         const kids = layer.current?.querySelectorAll<HTMLElement>('[data-star]') ?? [];
         kids.forEach((k, i) => { k.dataset.ra = String(created!.noted[i].ra); k.dataset.dec = String(created!.noted[i].dec); });
@@ -168,7 +272,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       created?.dispose();
       sky.current = null;
     };
-  }, []);
+  }, [playFigure]);
 
   // Full screen: the screen goes black, the stars come up, and the whole window is the map.
   const setFull = useCallback((next: boolean) => {
@@ -179,8 +283,34 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     const html = document.documentElement;
     html.classList.toggle('sky-full', next);
     fillTween.current?.kill();
+    glowTween.current?.kill();
     const s = sky.current, el = host.current;
     if (next) {
+      // Each visit to the full sky starts fresh: every figure plays once as it is come across.
+      seen.current.clear();
+      nextAt.current = gsap.ticker.time + 2.8;
+      if (!atlasRef.current) {
+        fetch('/sky/constellations.json')
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (!d || !sky.current) return;
+            const a = makeAtlas(d);
+            sky.current.setFigures(a.list);
+            atlasRef.current = a;
+            setAtlas(a);
+            setFound(readFound().length);
+          })
+          .catch(() => {}); // the map works without the figures
+      }
+      // The Milky Way and the stronger star colours come up once the stars are in.
+      if (s) {
+        s.loadMilkyWay('/sky/milkyway.webp');
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) s.setGlow(1);
+        else {
+          const g = { v: 0 };
+          glowTween.current = gsap.to(g, { v: 1, duration: 2.2, delay: 1.7, ease: 'power1.inOut', onUpdate: () => s.setGlow(g.v) });
+        }
+      }
       stopScroll();
       // Ask the browser for real full screen too; where that is refused the map still fills the window.
       html.requestFullscreen?.().catch(() => {});
@@ -195,7 +325,16 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         });
       }
     } else {
+      playing.current?.kill();
+      playing.current = null;
+      if (hover.current.timer) clearTimeout(hover.current.timer);
+      hover.current = { fig: -1, timer: null };
+      Object.assign(lineState.current, { active: -1, draw: 0, alpha: 0, all: 0 });
+      s?.setLines(lineState.current);
+      conLabel.current?.classList.remove('is-on');
+      setLinesOn(false);
       startScroll();
+      s?.setGlow(0);
       s?.setFill(1);
       if (el) delete el.dataset.filling;
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -225,8 +364,34 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     };
   }, [setFull]);
 
+  // Turn the sky, by the short way round, until the centre of the Milky Way is in the middle.
+  const GALACTIC_CENTRE = { ra: 266.42, dec: -28.94, fov: 78 };
+  const centreMilkyWay = () => {
+    const v = view.current;
+    setPick(null);
+    const dra = ((GALACTIC_CENTRE.ra - v.ra + 540) % 360) - 180;
+    const from = { ra: v.ra, dec: v.dec, fov: v.fov }, t = { k: 0 };
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    gsap.to(t, {
+      k: 1, duration: reduced ? 0 : 1.6, ease: 'power2.inOut', overwrite: true,
+      onUpdate: () => {
+        v.ra = (from.ra + dra * t.k + 360) % 360;
+        v.dec = from.dec + (GALACTIC_CENTRE.dec - from.dec) * t.k;
+        v.fov = from.fov + (GALACTIC_CENTRE.fov - from.fov) * t.k;
+        dirty.current = true;
+        touched.current = gsap.ticker.time;
+      },
+    });
+  };
+
+  const toggleLines = () => {
+    const on = !linesOn, L = lineState.current;
+    setLinesOn(on);
+    gsap.to(L, { all: on ? ALL_LINES : 0, duration: 0.5, ease: 'power2.out', overwrite: 'auto', onUpdate: () => sky.current?.setLines(L) });
+    dirty.current = true;
+  };
+
   // Pointer: drag turns the sky; a click without a drag picks.
-  const drag = useRef<{ x: number; y: number; moved: number; id: number } | null>(null);
   const onDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     drag.current = { x: e.clientX, y: e.clientY, moved: 0, id: e.pointerId };
@@ -317,7 +482,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
 
   const at = pick ? (pick.kind === 'star' ? pick.star : pick) : null;
   return (
-    <div className="sky" ref={host} data-state={state} onPointerMove={track} onPointerDown={track}>
+    <div className="sky" ref={host} data-state={state} data-lines={linesOn ? '' : undefined} onPointerMove={track} onPointerDown={track}>
       <canvas ref={canvas} className="sky__canvas" aria-hidden="true" />
       <div
         className="sky__pad" role="application" tabIndex={0}
@@ -325,6 +490,13 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { drag.current = null; }} onKeyDown={onKey}
       />
       <div className="sky__layer" ref={layer}>
+        {full && atlas && atlas.names.map((n) => (
+          <span key={`${n.name}${n.ra}`} className="sky__sname" data-tier={n.mag <= 1.7 ? 1 : 2} data-ra={n.ra} data-dec={n.dec} aria-hidden="true">{n.name}</span>
+        ))}
+        {full && atlas && linesOn && atlas.list.map((f) => (
+          <span key={f.name} className="sky__con is-on" data-ra={f.ra} data-dec={f.dec} aria-hidden="true"><b>{f.name}</b></span>
+        ))}
+        <span ref={conLabel} className="sky__con sky__con--active" aria-hidden="true"><b /><i /></span>
         {notedStars.map((s) => (
           <button
             key={s.id} type="button" data-star data-ra={s.ra} data-dec={s.dec}
@@ -387,9 +559,14 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         <button type="button" onClick={() => nudge(-1, 0)} aria-label="Turn west">&rarr;</button>
         <button type="button" onClick={() => nudge(0, 1)} aria-label="Turn north">&uarr;</button>
         <button type="button" onClick={() => nudge(0, -1)} aria-label="Turn south">&darr;</button>
+        {full && <button type="button" className="sky__linesbtn" onClick={centreMilkyWay} aria-label="Centre the Milky Way">Milky Way</button>}
+        {full && atlas && (
+          <button type="button" className="sky__linesbtn" onClick={toggleLines} aria-pressed={linesOn} aria-label={linesOn ? 'Hide the constellation lines' : 'Show all constellation lines'}>Lines</button>
+        )}
       </div>
-      {full && <p className="sky__readout" ref={readout} aria-hidden="true">Move the pointer over the sky</p>}
-      {full && <p className="sky__hint">Click any star, or any spot, to see its coordinates and blink it. Esc leaves full screen.</p>}
+      {full && atlas && <p className="sky__found" aria-live="polite">{found} of {atlas.ids.length} constellations found</p>}
+      {full && <p className="sky__readout" ref={readout} aria-hidden="true">Point at the sky for coordinates</p>}
+      {full && <p className="sky__hint">Turn the sky to find the constellations. Click any star, or any spot, to blink it. Esc leaves full screen.</p>}
       {state === 'nogl' && <p className="sky__fallback">This is a still picture of the sky: the live map needs WebGL, which this browser has switched off. The search box and the list of stars below work without it.</p>}
     </div>
   );

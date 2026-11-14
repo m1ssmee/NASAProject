@@ -210,3 +210,29 @@ URL parameter `rgb=1`; key C.
 - **Colour plates on the site.** The baked plates on the home, targets and target pages now use
   the three-detector colour version; the two difference views stay grey because a difference has
   no colour.
+
+## Revision 11: constellations on the full-screen sky
+
+- **Coming across a constellation.** In full screen, the figure nearest the middle of the view
+  that is mostly on screen draws itself star to star, blinks twice with its name and meaning
+  ("Orion, the hunter"), and fades away. It is the site's own gesture (hold, snap, hold) applied
+  to the sky. One figure at a time; each plays once per visit to the full sky; resting the pointer
+  on one of its stars plays it again. Reduced motion: the figure appears, holds and goes.
+- **Lines switch** in the map controls shows all 88 figures with their names.
+- **Found count** ("12 of 88 constellations found"), kept in the browser.
+- **Readout** names the constellation under the pointer; **bright stars** carry their names
+  (the 29 brightest always, 110 more when zoomed in).
+- Data: d3-celestial (BSD 3-Clause), baked by `scripts/bake-constellations.mts` with every line
+  end snapped to a Bright Star Catalogue dot. Lines are quads built in the vertex shader with the
+  same projection as the stars (`src/sky/scene.ts`); the choosing is in `src/sky/constellations.ts`.
+- Full screen only: on the home page the map sits under the headline and stays plain.
+
+## Revision 12: the Milky Way and colour, full screen
+
+- **Milky Way.** The star-free layer of NASA SVS Deep Star Maps 2020 (Gaia), sampled per pixel by
+  undoing the map's projection, so it turns and zooms with the stars. It fades in after the stars
+  have filled, is held well under full brightness so lines, names and rings stay readable, and
+  steps back slightly when zoomed in. Loaded only when full screen is opened (1 MB).
+- **Colour.** The ground goes deep blue-black; the stars' temperature tint is strengthened in full
+  screen; the Milky Way keeps its own colour with the saturation raised. Nothing is painted in.
+- The home page map stays plain: it sits under the headline.

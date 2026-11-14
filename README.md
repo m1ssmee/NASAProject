@@ -39,6 +39,8 @@ If Node reports `unable to get local issuer certificate` when the app calls IRSA
 
 The home page is a map of the real sky (`src/components/SkyMap.tsx`, `src/sky/`). Stars come from
 `public/sky/stars.bin`, baked from the Yale Bright Star Catalogue with `npx tsx scripts/bake-stars.mts`.
+`public/sky/constellations.json` (88 constellation figures, a which-constellation lookup grid and bright star names) is baked from [d3-celestial](https://github.com/ofrohn/d3-celestial) data (Olaf Frohn, BSD 3-Clause) with `npx tsx scripts/bake-constellations.mts`; run it after the star bake.
+`public/sky/milkyway.webp` is the star-free Milky Way layer of NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851), converted with `npx tsx scripts/bake-milkyway.mts` (needs ffmpeg).
 The stars that carry notes are in `src/data/stars.ts`; edit that file to add or correct one.
 
 ## Keeping up with new data
