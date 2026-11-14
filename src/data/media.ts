@@ -44,3 +44,29 @@ export const resources: { group: string; items: Resource[] }[] = [
     ],
   },
 ];
+
+/** NASA/JPL-Caltech images of and from SPHEREx, hosted here as compressed copies. */
+export interface Picture { id: string; w: number; h: number; title: string; caption: string; alt: string }
+
+export const pictures: Picture[] = [
+  {
+    id: 'PIA26354', w: 1200, h: 593, title: 'The Vela Molecular Ridge',
+    caption: 'From the first public data release, July 2025. The yellow glow at right is the nebula RCW 36, gas and dust lit by young stars.',
+    alt: 'A dense infrared star field in blue, green and yellow, with a glowing orange hourglass-shaped nebula at upper right.',
+  },
+  {
+    id: 'PIA26352', w: 1200, h: 674, title: 'A cloud only one colour shows',
+    caption: 'Dust in the Large Magellanic Cloud, a neighbouring galaxy, appears at 3.29 microns and is invisible in the bands beside it.',
+    alt: 'An orange cloud of dust with a mottled texture against a field of orange stars.',
+  },
+  {
+    id: 'PIA25788', w: 1200, h: 899, title: 'The filters, in the hand',
+    caption: 'Three of the six filters before launch. Each is about the size of a cracker and changes colour along its length, which is how one telescope sees 102 bands.',
+    alt: 'A metal tray holding three rectangular filters that shimmer green, pink and purple in bands.',
+  },
+  {
+    id: 'PIA26280', w: 1200, h: 777, title: 'First light, six detectors',
+    caption: 'Some of the first images, taken on 27 March 2025, one from each detector. The colours stand for infrared wavelengths the eye cannot see.',
+    alt: 'Six square star fields in two rows, tinted purple, teal, green, olive, yellow and red.',
+  },
+];

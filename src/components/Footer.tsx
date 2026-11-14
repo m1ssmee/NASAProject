@@ -12,12 +12,15 @@ export function Footer() {
       <div className="site-footer__col">
         <Link href="/view">Open the viewer</Link>
         <Link href="/targets">Five test targets</Link>
+        <Link href="/craft">The observatory</Link>
         <Link href="/method">How the frames are made</Link>
       </div>
       <div className="site-footer__col">
+        <a href="https://science.nasa.gov/mission/spherex/" target="_blank" rel="noopener noreferrer">SPHEREx at NASA Science</a>
+        <a href="https://www.jpl.nasa.gov/missions/spherex/" target="_blank" rel="noopener noreferrer">SPHEREx at JPL</a>
+        <a href="https://spherex.caltech.edu/" target="_blank" rel="noopener noreferrer">SPHEREx at Caltech</a>
+        <a href="https://irsa.ipac.caltech.edu/Missions/spherex.html" target="_blank" rel="noopener noreferrer">The image archive (IRSA)</a>
         <a href={site.challengeUrl} target="_blank" rel="noopener noreferrer">The challenge: Planet X and SPHEREx</a>
-        <a href="https://irsa.ipac.caltech.edu/Missions/spherex.html" target="_blank" rel="noopener noreferrer">SPHEREx data at IRSA</a>
-        <a href="http://byw.tools/wiseview" target="_blank" rel="noopener noreferrer">WiseView, the tool this follows</a>
       </div>
       <div className="site-footer__col">
         <p>Made for NASA Space Apps 2026{site.team.placeholder ? '' : ` by ${site.team.name}`}.</p>

@@ -166,3 +166,15 @@ links in three groups. Nothing from YouTube or NASA Eyes loads until the visitor
 are a still and a title until played (then youtube-nocookie.com), and the tracker sits behind a
 button. Links open in new tabs because NASA pages cannot be relied on to allow framing. The list
 is in `src/data/media.ts`; every video id was checked against YouTube.
+
+## Revision 8: NASA content on the home page
+
+- Under the headline: days in orbit, the newest image date, and a link to the live tracker.
+- "Latest from NASA": up to four stories with SPHEREx in the title, read from the public feeds of
+  nasa.gov and science.nasa.gov on the server and refreshed daily (`src/lib/news.ts`). If the
+  feeds fail the section is left out.
+- "What SPHEREx has already seen": four NASA/JPL-Caltech images (PIA26354, PIA26352, PIA25788,
+  PIA26280) hosted as compressed copies in `public/nasa/`, each credited and linked to its page
+  in the NASA image library.
+- "Stars with notes" shows eight with a button for the rest. The footer lists the official
+  mission sites.

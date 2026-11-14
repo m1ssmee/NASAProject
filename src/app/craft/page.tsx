@@ -89,7 +89,7 @@ export default function Craft() {
         </figure>
       </section>
 
-      <section className="sec--tight wrap" aria-label="Live position">
+      <section className="sec--tight wrap" aria-label="Live position" id="live" style={{ scrollMarginTop: '5rem' }}>
         <LiveOrbit />
       </section>
 

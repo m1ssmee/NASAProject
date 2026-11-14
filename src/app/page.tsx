@@ -5,10 +5,13 @@ import { Hop } from '@/components/Hop';
 import { Ruler } from '@/components/Ruler';
 import { FreshStrip, type FreshData } from '@/components/FreshStrip';
 import { FullSkyLink } from '@/components/FullSkyLink';
+import { NotedList } from '@/components/NotedList';
 import { Seek } from '@/components/Seek';
 import { SkyMap } from '@/components/SkyMap';
 import { notedStars, viewerHref } from '@/data/stars';
+import { pictures } from '@/data/media';
 import { targets } from '@/data/targets';
+import { getStories } from '@/lib/news';
 import freshJson from '../../public/sky/fresh.json';
 
 const fresh = freshJson as FreshData;
@@ -18,7 +21,20 @@ const rate = (t: (typeof targets)[number]) => {
   return t.expect === 'moves' ? `${pm.toFixed(1)}″ a year` : 'changes brightness';
 };
 
-export default function Home() {
+// Refresh the page once a day so the headlines and the days-in-orbit count stay current.
+export const revalidate = 86400;
+
+const LAUNCH = Date.UTC(2025, 2, 12, 3, 10); // 11 March 2025, 8:10 p.m. Pacific time
+const longDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+/** Whole days since launch, as of when the server last rendered this page (at most a day ago). */
+function daysInOrbit(): number {
+  return Math.floor((new Date().getTime() - LAUNCH) / 86400000);
+}
+
+export default async function Home() {
+  const stories = await getStories(4);
+  const daysUp = daysInOrbit();
   return (
     <>
       <section className="skyhero" aria-labelledby="hero-h">
@@ -28,6 +44,10 @@ export default function Home() {
             <h1 id="hero-h" className="display">Something up here moved.</h1>
           </div>
           <div className="skyhero__seek">
+            <p className="skyhero__status mono">
+              SPHEREx has been in orbit {daysUp} days.{fresh.newest ? ` Newest image: ${longDate(fresh.newest)}.` : ''}{' '}
+              <Link href="/craft#live" className="inline-link">Where is it now?</Link>
+            </p>
             <p className="skyhero__hint">Drag the sky. Pick a ringed star, or any spot, and SPHEREx shows you how it changed.</p>
             <Seek hint={false} />
           </div>
@@ -35,6 +55,25 @@ export default function Home() {
       </section>
 
       <FreshStrip data={fresh} />
+
+      {stories.length > 0 && (
+        <section className="fresh news wrap grid" aria-labelledby="news-h">
+          <div className="fresh__head">
+            <h2 id="news-h" className="h-l">Latest from NASA</h2>
+            <p className="small muted" style={{ marginTop: '0.5rem', maxWidth: '36ch' }}>The newest SPHEREx stories on nasa.gov, checked daily. They open in a new tab.</p>
+          </div>
+          <ul className="news__list">
+            {stories.map((n) => (
+              <li key={n.href}>
+                <a href={n.href} target="_blank" rel="noopener noreferrer">
+                  <span className="mono">{longDate(n.date)}</span>
+                  <b>{n.title}</b>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="sec wrap" aria-labelledby="read-h">
         <div className="grid game">
@@ -76,6 +115,30 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="sec wrap" aria-labelledby="seen-h">
+        <div className="grid">
+          <div className="sec__head">
+            <h2 id="seen-h" className="h-xl" data-split="lines">What SPHEREx has already seen</h2>
+            <p className="muted" style={{ marginTop: '1rem', maxWidth: '52ch' }}>Four pictures from NASA. The viewer on this site reads the same kind of images, one small square at a time.</p>
+          </div>
+        </div>
+        <div className="seen">
+          {pictures.map((pic, i) => (
+            <figure key={pic.id} className={`seen__item seen__item--${i + 1}`}>
+              <a href={`https://images.nasa.gov/details/${pic.id}`} target="_blank" rel="noopener noreferrer" aria-label={`${pic.title}. Open at NASA in a new tab.`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/nasa/${pic.id}.jpg`} alt={pic.alt} width={pic.w} height={pic.h} loading="lazy" decoding="async" />
+              </a>
+              <figcaption>
+                <b>{pic.title}</b>
+                <span>{pic.caption}</span>
+                <i>NASA/JPL-Caltech, {pic.id}</i>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
       <section className="sec--tight wrap" aria-labelledby="targets-h">
         <div className="grid">
           <div className="sec__head">
@@ -102,16 +165,9 @@ export default function Home() {
             <p className="muted" style={{ marginTop: '1rem', maxWidth: '52ch' }}>Every ringed star on the map, as a list. Each opens the viewer at that star.</p>
           </div>
         </div>
-        <ul className="noted">
-          {notedStars.filter((s) => !s.target).map((s) => (
-            <li key={s.id}>
-              <Link href={viewerHref({ ...s, name: s.name })}>
-                <b>{s.name}</b>
-                <span>{s.kind}{s.distance ? `, ${s.distance}` : ''}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <NotedList stars={notedStars.filter((x) => !x.target).map((x) => ({
+          id: x.id, name: x.name, sub: `${x.kind}${x.distance ? `, ${x.distance}` : ''}`, href: viewerHref({ ...x, name: x.name }),
+        }))} />
       </section>
 
       <section className="sec wrap grid bands" aria-labelledby="bands-h">
