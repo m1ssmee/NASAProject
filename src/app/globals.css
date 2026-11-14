@@ -569,6 +569,8 @@ html.intro-pending #main { z-index: auto; }
 html.intro-pending .sky { overflow: visible; }
 html.intro-pending .sky__canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 97; opacity: 1; pointer-events: none; }
 html.intro-pending .sky[data-state='loading'] .sky__canvas { opacity: 0; }
+.sky[data-state='ready'] { background-image: none; }
+html.intro-fill #twinkle { opacity: 0; transition: opacity 1.2s ease; }
 #twinkle { position: fixed; inset: 0; z-index: 98; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.6s ease, visibility 0s linear 0.6s; }
 html.intro-veil #twinkle { opacity: 1; visibility: visible; transition: none; }
 #twinkle i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--glass); box-shadow: 0 0 6px 1px rgb(231 233 230 / 0.7); }

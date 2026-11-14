@@ -53,6 +53,10 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       const r = el.getBoundingClientRect();
       view.current.width = Math.max(1, Math.round(fullscreen ? innerWidth : r.width));
       view.current.height = Math.max(1, Math.round(fullscreen ? innerHeight : r.height));
+      // Full window: keep the projection centred on the map's own box, at the map's own scale,
+      // so the stars are exactly where they will be when the canvas returns to that box.
+      view.current.cy = fullscreen ? r.top + r.height / 2 : undefined;
+      view.current.span = fullscreen ? Math.min(r.width, r.height) : undefined;
       dirty.current = true;
     };
     measure();
@@ -65,7 +69,10 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
 
     // Markers and the card are moved by hand each frame: no React render while dragging.
     const place = () => {
-      const v = view.current;
+      // Markers live inside the map's box, so they are placed against the box even while the
+      // canvas itself covers the whole window.
+      const box = el.getBoundingClientRect();
+      const v: View = fullscreen ? { ...view.current, width: box.width, height: box.height, cy: undefined, span: undefined } : view.current;
       const s = sky.current;
       if (!layer.current || !s) return;
       const kids = layer.current.children;
@@ -315,40 +322,40 @@ function endIntro() {
 }
 
 /**
- * The opening. The page loads fully dark with a few stars twinkling; SPHEREx appears, wanders
- * along a path that is different every time, settles into the header as the logo mark, and
- * then the site fades in. Plays when the home page is loaded directly; any click, key or scroll
- * skips it; never under reduced motion.
+ * The opening, in the owner's order:
+ *   1. the page is dark and two or three stars twinkle;
+ *   2. the sky fills with stars, brightest first, across the whole window;
+ *   3. SPHEREx appears and travels slowly to the logo;
+ *   4. the site appears.
+ * The star field is the real map drawn full-window at the map's own scale, so nothing jumps
+ * when the site fades in around it. Plays when the home page is loaded directly; any click,
+ * key, scroll or touch skips it; never under reduced motion.
  */
 function playIntro(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => void): gsap.core.Timeline | null {
   const html = document.documentElement;
   if (reduced || !html.classList.contains('intro-pending')) { endIntro(); return null; }
   const { craft, craftCamera } = sky;
   setFullscreen(true);
-  sky.setStars(0);
+  sky.setFill(0);
 
-  // Screen position to a point in front of the craft camera at a given depth.
+  // Screen position (-1..1) to a point in front of the craft camera at a given depth.
   const at = (nx: number, ny: number, depth: number) => {
     const halfH = Math.tan((craftCamera.fov * Math.PI) / 360) * depth;
     return { x: nx * halfH * (innerWidth / innerHeight), y: ny * halfH, z: -depth };
   };
   const mark = document.querySelector<HTMLElement>('.wordmark__craft')?.getBoundingClientRect();
-  const end = at(
-    mark ? ((mark.left + mark.width / 2) / innerWidth) * 2 - 1 : -0.94,
-    mark ? 1 - ((mark.top + mark.height / 2) / innerHeight) * 2 : 0.94,
-    64,
-  );
-  // A different wander each time: start somewhere in the lower right, swing through two random
-  // points, then home in on the logo.
-  const rnd = (a: number, b: number) => a + Math.random() * (b - a);
-  const start = at(rnd(0.15, 0.7), rnd(-0.6, -0.1), 15);
-  const mid1 = at(rnd(-0.55, 0.1), rnd(-0.35, 0.5), 19);
-  const mid2 = at(rnd(0.0, 0.6), rnd(0.05, 0.65), 27);
-
-  sky.showCraft(true);
-  craft.position.set(start.x, start.y, start.z);
+  // The flight is tweened in screen terms (where on screen, how far away) and converted each
+  // frame, so the craft crosses the window at an even, slow pace however deep it is.
+  const path = { nx: 0.42 + Math.random() * 0.2, ny: -0.42 + Math.random() * 0.2, depth: 13 };
+  const endN = {
+    nx: mark ? ((mark.left + mark.width / 2) / innerWidth) * 2 - 1 : -0.94,
+    ny: mark ? 1 - ((mark.top + mark.height / 2) / innerHeight) * 2 : 0.94,
+  };
+  const fly = () => { const p = at(path.nx, path.ny, path.depth); craft.position.set(p.x, p.y, p.z); };
+  fly();
   craft.scale.setScalar(0.001);
   const spin = { x: craft.rotation.x, y: craft.rotation.y, z: craft.rotation.z };
+  const fill = { f: 0 };
 
   let done = false;
   const finish = () => {
@@ -358,20 +365,22 @@ function playIntro(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => v
     sky.showCraft(false);
     craft.scale.setScalar(1);
     craft.rotation.set(spin.x, spin.y, spin.z);
-    setFullscreen(false);
-    html.classList.remove('intro-pending'); // canvas returns to its place, still under the veil
-    const stars = { a: 0 };
-    gsap.to(stars, { a: 1, duration: 0.9, ease: 'power2.out', onUpdate: () => sky.setStars(stars.a) });
-    requestAnimationFrame(() => html.classList.remove('intro-veil')); // the site fades in
+    sky.setFill(1);
+    html.classList.add('intro-fill');
+    html.classList.remove('intro-veil'); // the site fades in beneath the stars
+    // When the fade is done, hand the canvas back to the map's box. The stars do not move.
+    setTimeout(() => { html.classList.remove('intro-pending', 'intro-fill'); setFullscreen(false); }, 950);
   };
   const tl = gsap.timeline({ onComplete: finish })
-    .to({}, { duration: 0.9 }) // dark, stars twinkling
-    .to(craft.scale, { x: 1, y: 1, z: 1, duration: 0.55, ease: 'back.out(1.6)' })
-    .to(craft.position, { ...mid1, duration: 0.8, ease: 'sine.inOut' }, '<0.1')
-    .to(craft.position, { ...mid2, duration: 0.8, ease: 'sine.inOut' })
-    .to(craft.position, { ...end, duration: 0.95, ease: 'power2.inOut' })
-    .to(craft.scale, { x: 0.75, y: 0.75, z: 0.75, duration: 0.5, ease: 'power2.in' }, '<0.45')
-    .to(craft.rotation, { y: spin.y + 2.6, z: spin.z + 0.9, x: spin.x - 0.35, duration: 2.6, ease: 'none' }, 0.9);
+    .to({}, { duration: 1.0 }) // 1. dark, a few stars twinkling
+    .call(() => html.classList.add('intro-fill')) // the placeholder stars give way to the real ones
+    .to(fill, { f: 1, duration: 2.0, ease: 'power2.in', onUpdate: () => sky.setFill(fill.f) }) // 2. the sky fills
+    .call(() => sky.showCraft(true), undefined, '-=0.35') // 3. the spacecraft, slowly, to the logo
+    .to(craft.scale, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'power2.out' }, '<')
+    .to(path, { nx: endN.nx, duration: 3.4, ease: 'sine.inOut', onUpdate: fly }, '<0.3')
+    .to(path, { ny: endN.ny, duration: 3.4, ease: 'power1.inOut' }, '<')
+    .to(path, { depth: 150, duration: 3.4, ease: 'power2.in' }, '<')
+    .to(craft.rotation, { y: spin.y + 1.5, z: spin.z + 0.45, x: spin.x - 0.25, duration: 3.4, ease: 'sine.inOut' }, '<');
   const skip = () => { tl.kill(); finish(); };
   const off = () => { removeEventListener('pointerdown', skip); removeEventListener('keydown', skip); removeEventListener('wheel', skip); removeEventListener('touchstart', skip); };
   addEventListener('pointerdown', skip, { once: true });

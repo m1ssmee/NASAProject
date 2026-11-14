@@ -13,6 +13,10 @@ export interface View {
   fov: number;
   width: number;
   height: number;
+  /** Optional: vertical centre of the projection in pixels (default: half the height). */
+  cy?: number;
+  /** Optional: the length the field of view spans (default: the shorter side). */
+  span?: number;
 }
 
 export const FOV_MIN = 12;
@@ -33,7 +37,7 @@ export function basis(ra: number, dec: number): [Vec3, Vec3, Vec3] {
 
 /** Pixels per unit of stereographic plane. */
 export function scaleOf(v: View): number {
-  return Math.min(v.width, v.height) / 2 / (2 * Math.tan((v.fov * D2R) / 4));
+  return (v.span ?? Math.min(v.width, v.height)) / 2 / (2 * Math.tan((v.fov * D2R) / 4));
 }
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -45,14 +49,14 @@ export function toScreen(v: View, ra: number, dec: number): { x: number; y: numb
   const z = dot(p, front);
   if (z < -0.2) return null;
   const k = (2 / (1 + z)) * scaleOf(v);
-  return { x: v.width / 2 + dot(p, right) * k, y: v.height / 2 - dot(p, north) * k };
+  return { x: v.width / 2 + dot(p, right) * k, y: (v.cy ?? v.height / 2) - dot(p, north) * k };
 }
 
 /** Screen pixels to sky position, degrees. */
 export function toSky(v: View, x: number, y: number): { ra: number; dec: number } {
   const [right, north, front] = basis(v.ra, v.dec);
   const s = scaleOf(v);
-  const X = (x - v.width / 2) / s, Y = -(y - v.height / 2) / s;
+  const X = (x - v.width / 2) / s, Y = -(y - (v.cy ?? v.height / 2)) / s;
   const r2 = X * X + Y * Y;
   // Inverse stereographic projection onto the unit sphere.
   const z = (4 - r2) / (4 + r2);
@@ -68,7 +72,7 @@ export function toSky(v: View, x: number, y: number): { ra: number; dec: number 
 
 /** Drag by (dx, dy) pixels: the sky follows the pointer. */
 export function pan(v: View, dx: number, dy: number): { ra: number; dec: number } {
-  const degPerPx = v.fov / Math.min(v.width, v.height);
+  const degPerPx = v.fov / (v.span ?? Math.min(v.width, v.height));
   const dec = Math.max(-89.5, Math.min(89.5, v.dec + dy * degPerPx));
   const ra = v.ra + (dx * degPerPx) / Math.max(0.2, Math.cos(dec * D2R));
   return { ra: ((ra % 360) + 360) % 360, dec };

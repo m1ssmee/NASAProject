@@ -113,12 +113,18 @@ the render loop runs at half rate with no idle drift, to keep page scrolling smo
 
 ## Revision 3: the opening, as directed by the owner
 
-The home page now loads fully dark with three stars twinkling (positions random per load).
-SPHEREx appears, wanders through two random points, and settles into the header as the logo
-mark; then the whole site fades in. About 3.3 s after the 3D code is ready. It plays on every
-direct load of the home page, is skipped by any click, key, scroll or touch, and never plays
-under reduced motion. An inline script sets the veil before first paint and removes it after
-8 s whatever happens, so a failed 3D load cannot leave the page dark.
+In the owner's order:
+1. The home page loads fully dark and three stars twinkle (positions random per load).
+2. The sky fills with stars across the whole window, brightest first.
+3. SPHEREx appears and travels slowly to the logo, shrinking into the header mark.
+4. The whole site fades in.
 
-This is longer than the 2.6 s the skill recommends for an opening, and the site is not visible
+The star field in steps 2 to 4 is the real map, drawn full-window but projected at the map's own
+scale and centre, so when the site fades in beneath it and the canvas returns to its box, no star
+moves. About 6.5 s after the 3D code is ready, plus a 0.9 s fade. It plays on every direct load of
+the home page, is skipped by any click, key, scroll or touch, and never plays under reduced
+motion. An inline script sets the veil before first paint and removes it after 12 s whatever
+happens, so a failed 3D load cannot leave the page dark.
+
+This is well past the 2.6 s the skill recommends for an opening, and the site is not visible
 until it ends. That is a deliberate choice by the owner for the hackathon presentation.

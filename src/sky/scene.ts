@@ -9,6 +9,8 @@ export interface NotedInput { ra: number; dec: number; pulse?: number }
 const vertex = /* glsl */ `
 uniform mat3 uBasis;
 uniform vec2 uScale;
+uniform float uShiftY;
+uniform float uFill;
 uniform float uTime;
 uniform float uDpr;
 uniform float uZoom;
@@ -22,7 +24,7 @@ varying float vAlpha;
 void main() {
   vec3 q = uBasis * position;
   float k = 2.0 / (1.0 + q.z);
-  gl_Position = q.z < -0.2 ? vec4(2.0, 2.0, 2.0, 1.0) : vec4(q.xy * k * uScale, 0.0, 1.0);
+  gl_Position = q.z < -0.2 ? vec4(2.0, 2.0, 2.0, 1.0) : vec4(q.xy * k * uScale + vec2(0.0, uShiftY), 0.0, 1.0);
   float b = clamp((7.2 - aMag) / 8.6, 0.04, 1.0);
   float size = (1.9 + 10.5 * b * b) * uZoom;
   float glow = 0.0;
@@ -39,7 +41,9 @@ void main() {
   vec3 cool = vec3(0.74, 0.82, 1.0), white = vec3(1.0, 0.98, 0.95), warm = vec3(1.0, 0.76, 0.56);
   float t = clamp((aBv + 0.2) / 1.9, 0.0, 1.0);
   vColor = t < 0.4 ? mix(cool, white, t / 0.4) : mix(white, warm, (t - 0.4) / 0.6);
-  vAlpha = min(1.0, 0.5 + 0.75 * b + 0.5 * glow) * uStars;
+  // The opening fills the sky brightest stars first: uFill sweeps a magnitude limit from -2 to 8.5.
+  float limit = mix(-2.0, 8.5, uFill);
+  vAlpha = min(1.0, 0.5 + 0.75 * b + 0.5 * glow) * uStars * (1.0 - smoothstep(limit - 0.9, limit, aMag));
 }`;
 
 const fragment = /* glsl */ `
@@ -49,7 +53,7 @@ varying float vAlpha;
 void main() {
   float d = length(gl_PointCoord - 0.5);
   float a = smoothstep(0.5, 0.18, d);
-  gl_FragColor = vec4(vColor * vAlpha * a, 1.0);
+  gl_FragColor = vec4(vColor * vAlpha * a, vAlpha * a);
 }`;
 
 export interface Sky {
@@ -60,6 +64,8 @@ export interface Sky {
   setShine(s: number): void;
   /** Overall star brightness, 0 to 1 (the opening fades the sky in). */
   setStars(a: number): void;
+  /** 0 shows no stars, 1 all of them; in between, the brightest come first. */
+  setFill(f: number): void;
   craft: THREE.Group;
   craftCamera: THREE.PerspectiveCamera;
   showCraft(on: boolean): void;
@@ -68,10 +74,11 @@ export interface Sky {
 }
 
 export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, notedIn: NotedInput[]): Sky {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'low-power' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, premultipliedAlpha: true, powerPreference: 'low-power' });
   const dpr = Math.min(window.devicePixelRatio || 1, matchMedia('(max-width: 767px)').matches ? 1.25 : 1.5);
   renderer.setPixelRatio(dpr);
-  renderer.setClearColor(0x101214, 1);
+  // Transparent: during the opening this canvas lies over the whole page.
+  renderer.setClearColor(0x000000, 0);
   renderer.autoClear = false;
 
   const n = catalogue.length / 4;
@@ -118,10 +125,13 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
     uZoom: { value: 1 },
     uShine: { value: 1 },
     uStars: { value: 1 },
+    uFill: { value: 1 },
+    uShiftY: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({
     vertexShader: vertex, fragmentShader: fragment, uniforms,
-    depthTest: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending,
+    depthTest: false, depthWrite: false, transparent: true,
+    blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
   });
   const points = new THREE.Points(geometry, material);
   points.frustumCulled = false;
@@ -156,10 +166,12 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
       uniforms.uBasis.value.set(r[0], r[1], r[2], nn[0], nn[1], nn[2], f[0], f[1], f[2]);
       const s = scaleOf(v);
       uniforms.uScale.value.set(s / (w / 2), s / (h / 2));
+      uniforms.uShiftY.value = v.cy !== undefined ? 1 - (2 * v.cy) / h : 0;
       uniforms.uZoom.value = Math.min(2.2, Math.max(0.85, Math.sqrt(60 / v.fov)));
     },
     setShine(s) { uniforms.uShine.value = s; },
     setStars(a) { uniforms.uStars.value = a; },
+    setFill(f) { uniforms.uFill.value = f; },
     showCraft(on) { craft.visible = on; },
     render(time) {
       uniforms.uTime.value = time;
