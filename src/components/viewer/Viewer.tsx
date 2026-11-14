@@ -18,6 +18,7 @@ import { paint, paintRgb, subtract } from '@/lib/render';
 import { useTone } from '@/lib/tone';
 import { deproject, makeWcs, project, skyToPix } from '@/lib/wcs';
 import { LightCurve, type CurveMean, type CurvePoint } from './LightCurve';
+import { ReportDialog } from './ReportDialog';
 import { Spectrum, type SpecPoint } from './Spectrum';
 
 export interface ViewParams {
@@ -78,6 +79,8 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
   const [mark, setMark] = useState<{ x: number; y: number } | null>(null);
   const [spec, setSpec] = useState<{ points: SpecPoint[]; done: number; total: number } | null>(null);
   const [copied, setCopied] = useState('');
+  // Reporting: 'picking' waits for a click on the plate, 'open' shows the form.
+  const [report, setReport] = useState<'closed' | 'picking' | 'open'>('closed');
 
   const canvas = useRef<HTMLCanvasElement>(null);
   const tone = useTone();
@@ -304,6 +307,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
     if (ev.detail === 0) { setMark(null); return; }
     const r = ev.currentTarget.getBoundingClientRect();
     setMark({ x: ((ev.clientX - r.left) / r.width) * grid.n - 0.5, y: ((ev.clientY - r.top) / r.height) * grid.n - 0.5 });
+    if (report === 'picking') setReport('open');
   };
   const markSky = useMemo(() => {
     if (!mark) return null;
@@ -448,21 +452,8 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
     }
   };
 
-  // A candidate report: everything someone else needs to look at the same thing.
-  const copyReport = async () => {
-    if (!markSky) return;
-    const here = `${location.origin}/view?ra=${markSky.ra.toFixed(5)}&dec=${markSky.dec.toFixed(5)}&fov=${fov}&det=${det}${colour ? '&rgb=1' : ''}`;
-    const text = [
-      'SPHEREx candidate, found with Blinkscope',
-      `Position (ICRS): ${formatRa(markSky.ra)} ${formatDec(markSky.dec)}  =  ${markSky.ra.toFixed(5)}, ${markSky.dec >= 0 ? '+' : ''}${markSky.dec.toFixed(5)} deg`,
-      `Seen in: ${colour ? 'colour plates (detectors 2, 4 and 6)' : `detector ${det} (${DETECTORS[det - 1].min} to ${DETECTORS[det - 1].max} microns)`}`,
-      `Plates: ${epochs.map((e) => isoDate(e.mjd)).join(', ')}`,
-      `View it: ${here}`,
-      `SIMBAD within 20 arcsec: https://simbad.cfa.harvard.edu/simbad/sim-coo?Coord=${markSky.ra.toFixed(5)}+${markSky.dec.toFixed(5)}&Radius=20&Radius.unit=arcsec`,
-      'What I saw: ',
-    ].join('\n');
-    try { await navigator.clipboard.writeText(text); setCopied('report'); setTimeout(() => setCopied(''), 2200); } catch { setCopied('failed'); }
-  };
+  // Reporting a candidate starts from a mark on the plate; without one, ask for it first.
+  const startReport = () => { setPlaying(false); setReport(mark ? 'open' : 'picking'); };
 
   const loading = !!records && (!current || progress.done < progress.total);
   const empty = !!records && !loading && frames.length === 0;
@@ -504,7 +495,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
               {error ? error : empty ? `No detector ${det} exposures cover this position yet.` : records ? 'Reading pixels from the archive' : 'Asking the archive which exposures cover this position'}
             </p>
           )}
-          {epoch && <button type="button" className="plate__hit" onClick={clickPlate} aria-label="Mark a position on the plate" />}
+          {epoch && <button type="button" className={`plate__hit${report === 'picking' ? ' is-picking' : ''}`} onClick={clickPlate} aria-label={report === 'picking' ? 'Click the object you want to report' : 'Mark a position on the plate'} />}
           <span className="plate__compass" aria-hidden="true">N up, E left</span>
           {epoch && (
             <div className="plate__edge" aria-hidden="true">
@@ -529,6 +520,16 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
             {epochs.length > 24 && <span className="mono">{cur + 1} of {epochs.length}</span>}
           </div>
         </div>
+        {epoch && (
+          <div className="reportbar">
+            <button type="button" className="btn" onClick={startReport}><Hop tick={false}>Report a candidate</Hop></button>
+            <p className="note" aria-live="polite">
+              {report === 'picking'
+                ? <><strong>Now click the object on the plate.</strong> <button type="button" className="inline-link" onClick={() => setReport('closed')}>Cancel</button></>
+                : 'Seen something move or change? Send it to the people who follow these up.'}
+            </p>
+          </div>
+        )}
         <div className="status" aria-live="polite">
           {error && <p className="note note--warn">{error} <button type="button" className="inline-link" onClick={() => location.reload()}>Try again</button></p>}
           {records && current && progress.total > 0 && (
@@ -625,12 +626,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
               <a className="inline-link" target="_blank" rel="noopener noreferrer" href={`http://byw.tools/wiseview#ra=${markSky.ra.toFixed(5)}&dec=${markSky.dec.toFixed(5)}&size=${fov}`}>WiseView</a>
               <button type="button" className="inline-link" onClick={() => setMark(null)}>Clear</button>
             </div>
-            <h3 className="panel__h" style={{ marginTop: '0.5rem' }}>Think you found something?</h3>
-            <p className="note">First check SIMBAD and VizieR above: most movers are already known. If nothing is listed there, copy a report and post it to the Backyard Worlds volunteers, who follow up finds like this.</p>
-            <div className="links">
-              <button type="button" className="inline-link" onClick={copyReport}>{copied === 'report' ? 'Report copied' : 'Copy a report'}</button>
-              <a className="inline-link" target="_blank" rel="noopener noreferrer" href="https://www.zooniverse.org/projects/marckuchner/backyard-worlds-planet-9/talk">Backyard Worlds discussion board</a>
-            </div>
+            <button type="button" className="btn btn--quiet" onClick={() => setReport('open')}><Hop tick={false}>Report this as a candidate</Hop></button>
           </section>
         )}
 
@@ -697,6 +693,14 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
           <p className="note">Keys: space plays, arrows step, 1 to 6 pick a detector, C colour, D subtracts.</p>
         </section>
       </div>
+      <ReportDialog
+        open={report === 'open' && !!markSky}
+        onClose={() => setReport('closed')}
+        sky={markSky}
+        seenIn={colour ? 'colour plates (detectors 2, 4 and 6)' : `detector ${det} (${DETECTORS[det - 1].min} to ${DETECTORS[det - 1].max} microns)`}
+        plates={epochs.map((e) => isoDate(e.mjd))}
+        link={markSky ? `${typeof location === 'undefined' ? '' : location.origin}/view?ra=${markSky.ra.toFixed(5)}&dec=${markSky.dec.toFixed(5)}&fov=${fov}&det=${det}${colour ? '&rgb=1' : ''}` : ''}
+      />
     </div>
   );
 }
