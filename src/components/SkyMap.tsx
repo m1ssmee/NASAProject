@@ -410,7 +410,7 @@ function playIntro(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => v
   const mark = document.querySelector<HTMLElement>('.wordmark__craft')?.getBoundingClientRect();
   // The flight is tweened in screen terms (where on screen, how far away) and converted each
   // frame, so the craft crosses the window at an even, slow pace however deep it is.
-  const path = { nx: 0.42 + Math.random() * 0.2, ny: -0.42 + Math.random() * 0.2, depth: 13 };
+  const path = { nx: 0.3 + Math.random() * 0.2, ny: -0.3 + Math.random() * 0.2, depth: 9.5 };
   const endN = {
     nx: mark ? ((mark.left + mark.width / 2) / innerWidth) * 2 - 1 : -0.94,
     ny: mark ? 1 - ((mark.top + mark.height / 2) / innerHeight) * 2 : 0.94,
@@ -443,8 +443,9 @@ function playIntro(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => v
     .to(craft.scale, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'power2.out' }, '<')
     .to(path, { nx: endN.nx, duration: 3.4, ease: 'sine.inOut', onUpdate: fly }, '<0.3')
     .to(path, { ny: endN.ny, duration: 3.4, ease: 'power1.inOut' }, '<')
-    .to(path, { depth: 150, duration: 3.4, ease: 'power2.in' }, '<')
-    .to(craft.rotation, { y: spin.y + 1.5, z: spin.z + 0.45, x: spin.x - 0.25, duration: 3.4, ease: 'sine.inOut' }, '<');
+    .to(path, { depth: 150, duration: 3.4, ease: 'power3.in' }, '<')
+    // Turn away from the solar array, so the shields, bus and star trackers stay in view.
+    .to(craft.rotation, { y: spin.y - 1.0, z: spin.z + 0.2, x: spin.x - 0.08, duration: 3.4, ease: 'sine.inOut' }, '<');
   const skip = () => { tl.kill(); finish(); };
   const off = () => { removeEventListener('pointerdown', skip); removeEventListener('keydown', skip); removeEventListener('wheel', skip); removeEventListener('touchstart', skip); };
   addEventListener('pointerdown', skip, { once: true });

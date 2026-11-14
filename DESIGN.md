@@ -136,3 +136,14 @@ first (the same fill as the opening), and the whole window is the map: every sta
 every other point works as before, including "Blink". The browser is also asked for real full
 screen where it allows it. Escape or the same button leaves; leaving for the viewer restores the
 page. Under reduced motion the switch is instant.
+
+## Revision 5: the spacecraft model
+
+Rebuilt from NASA/JPL-Caltech references (PIA26531, PIA26543, PIA26537) at real proportions,
+one unit per metre: three nested photon shields with stepped rims, the outer one a mirror
+finish with gore seams; the telescope baffle; three V-groove radiator rings; an eight-sided bus
+with foil-wrapped equipment boxes, two star trackers, antennas and the launch adapter ring; and
+the solar array hanging along the sun side with its struts and hinge brackets. Lit as in orbit
+(one hard sun, faint earthshine) with a generated reflection environment. All textures are drawn
+in code; nothing is downloaded. `src/sky/stage.ts` holds the model's scene so the opening and
+the new inspection page `/craft` (drag to turn it) share it.

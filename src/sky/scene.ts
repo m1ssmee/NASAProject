@@ -2,7 +2,7 @@
 // shader with the same stereographic maths as project.ts, plus the spacecraft for the intro.
 import * as THREE from 'three';
 import { basis, radecToVec, scaleOf, separation, type View } from './project';
-import { buildSpacecraft } from './spacecraft';
+import { buildCraftStage } from './stage';
 
 export interface NotedInput { ra: number; dec: number; pulse?: number }
 
@@ -139,15 +139,9 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
   starScene.add(points);
   const flat = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  const craftScene = new THREE.Scene();
-  const craftCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 200);
-  const craft = buildSpacecraft();
+  const stage = buildCraftStage(renderer);
+  const { scene: craftScene, camera: craftCamera, craft } = stage;
   craft.visible = false;
-  craftScene.add(craft);
-  craftScene.add(new THREE.HemisphereLight(0xffffff, 0x5a6470, 1.5));
-  const sun = new THREE.DirectionalLight(0xffffff, 2.6);
-  sun.position.set(-2, 5, 6);
-  craftScene.add(sun);
 
   let w = 0, h = 0;
   return {
@@ -185,11 +179,7 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
     dispose() {
       geometry.dispose();
       material.dispose();
-      craft.traverse((o) => {
-        const m = o as THREE.Mesh;
-        m.geometry?.dispose();
-        (Array.isArray(m.material) ? m.material : m.material ? [m.material] : []).forEach((x) => x.dispose());
-      });
+      stage.dispose();
       renderer.dispose();
     },
   };
