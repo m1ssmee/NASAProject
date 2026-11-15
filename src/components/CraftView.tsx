@@ -20,11 +20,19 @@ const NAMES: [string, string, string, number][] = [
   ['shield1', 'Photon shields', 'Three cones, 3.2 m across, 1.7 m tall', 0.75],
   ['radiators', 'V-groove radiators', 'Three rings that shed heat to space', -0.1],
   ['bus', 'Spacecraft bus', 'Computer, battery, reaction wheels, radios', -0.68],
-  ['array', 'Solar array', '2.67 m by 1.02 m, about 750 W', -1.0],
+  ['array', 'Solar array', '2.67 m by 1.02 m, about 750 W', -0.6],
 ];
 
-/** `focus`: a piece to come in close on while it is pulled apart (one of the names in APART). */
-export function CraftView({ target, onUserTurn, explodable = false, focus = null }: { target?: CraftAngle | null; onUserTurn?: () => void; explodable?: boolean; focus?: string | null }) {
+interface Props {
+  target?: CraftAngle | null;
+  onUserTurn?: () => void;
+  /** Show the "Pull it apart" button and the names. */
+  explodable?: boolean;
+  /** A piece to come in close on while it is pulled apart (one of the names in APART). */
+  focus?: string | null;
+}
+
+export function CraftView({ target, onUserTurn, explodable = false, focus = null }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const rot = useRef<CraftAngle>({ x: 0.34, y: 0.75 });
@@ -150,7 +158,7 @@ export function CraftView({ target, onUserTurn, explodable = false, focus = null
           let level = 0;
           if (n.v > 0 && n.part) {
             const row = NAMES.find(([name]) => name === n.part || (n.part.startsWith('shield') && name === 'shield1'));
-            at.set(n.part === 'array' ? -0.6 : 0, (row?.[3] ?? 0) - 0.2, 0);
+            at.set(0, (row?.[3] ?? 0) - 0.1, 0);
             level = stage.craft.getObjectByName(row?.[0] ?? n.part)!.localToWorld(at).y;
           }
           stage.camera.position.set(0, level * n.v, far * (1 + 0.5 * e) * (1 - 0.58 * n.v));

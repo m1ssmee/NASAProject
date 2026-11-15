@@ -105,6 +105,66 @@ function crinkle(): THREE.Texture {
   return t;
 }
 
+/** The white cloth blankets round the bus, as photographed: soft folds, sewn seams, a few sharp
+ *  creases, and strips of orange tape holding the edges down. Colour and relief. */
+function cloth(): { map: THREE.Texture; relief: THREE.Texture } {
+  const N = 512;
+  const seams = (g: CanvasRenderingContext2D, ink: string, width: number) => {
+    g.strokeStyle = ink;
+    g.lineWidth = width;
+    [N / 6, N / 2, (N * 5) / 6].forEach((x) => { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, N); g.stroke(); });
+    [N * 0.3, N * 0.74].forEach((y) => { g.beginPath(); g.moveTo(0, y); g.lineTo(N, y); g.stroke(); });
+  };
+  const height = relief(N, N, 2.4, (g, rnd) => {
+    // Soft folds: long, shallow ridges and hollows lying mostly across the body.
+    for (let i = 0; i < 46; i++) {
+      const v = rnd() > 0.5 ? 255 : 0, r = 30 + rnd() * 60;
+      g.save();
+      g.translate(rnd() * N, rnd() * N);
+      g.rotate((rnd() - 0.5) * 1.2);
+      g.scale(2.6 + rnd() * 2, 0.5);
+      const d = g.createRadialGradient(0, 0, 0, 0, 0, r);
+      d.addColorStop(0, `rgba(${v}, ${v}, ${v}, ${0.1 + rnd() * 0.12})`);
+      d.addColorStop(1, `rgba(${v}, ${v}, ${v}, 0)`);
+      g.fillStyle = d;
+      g.fillRect(-r, -r, r * 2, r * 2);
+      g.restore();
+    }
+    // Sharp creases where the cloth was folded.
+    for (let i = 0; i < 14; i++) {
+      const x = rnd() * N, y = rnd() * N, a = rnd() * Math.PI, l = 40 + rnd() * 110;
+      g.strokeStyle = `rgba(0, 0, 0, ${0.14 + rnd() * 0.12})`;
+      g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+    }
+    seams(g, 'rgba(0, 0, 0, 0.5)', 3); // seams are sewn down: a groove
+  });
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d')!, rnd = random(31);
+  g.fillStyle = '#e9e9e4';
+  g.fillRect(0, 0, N, N);
+  for (let i = 0; i < 60; i++) { // handled cloth is never one even white
+    const v = rnd() > 0.5 ? 255 : 150, r = 30 + rnd() * 80, x = rnd() * N, y = rnd() * N;
+    const d = g.createRadialGradient(x, y, 0, x, y, r);
+    d.addColorStop(0, `rgba(${v}, ${v}, ${v}, 0.07)`);
+    d.addColorStop(1, `rgba(${v}, ${v}, ${v}, 0)`);
+    g.fillStyle = d;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  seams(g, 'rgba(120, 122, 118, 0.55)', 1.5);
+  g.fillStyle = '#c48a34'; // tape across the seams
+  [[N / 6, 60], [N / 6, 300], [N / 2, 150], [N / 2, 420], [(N * 5) / 6, 90], [(N * 5) / 6, 350], [120, N * 0.3], [380, N * 0.74]].forEach(([x, y], i) => {
+    if (i < 6) g.fillRect(x - 13, y - 5, 26, 10); else g.fillRect(x - 5, y - 13, 10, 26);
+  });
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.anisotropy = 8;
+  height.wrapT = THREE.RepeatWrapping;
+  return { map, relief: height };
+}
+
 /** The back of the solar array, as photographed: a black panel with cable runs laid at right angles. */
 function arrayBack(): THREE.Texture {
   const c = document.createElement('canvas');
@@ -215,13 +275,16 @@ export function buildSpacecraft(): THREE.Group {
   // takes the light the way the photographs of the bare shields do.
   const filmOut = new THREE.MeshStandardMaterial({ color: 0xd4d8dd, map: film, metalness: 0.6, roughness: 0.42, side: THREE.FrontSide });
   const filmIn = new THREE.MeshStandardMaterial({ color: 0xc2c7ce, map: film, metalness: 0.5, roughness: 0.5, side: THREE.BackSide });
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x8b9199, metalness: 0.85, roughness: 0.42, side: THREE.DoubleSide });
   const rim = new THREE.MeshStandardMaterial({ color: 0xcfd4da, metalness: 1, roughness: 0.42 });
   const black = new THREE.MeshStandardMaterial({ color: 0x1b1c20, metalness: 0.1, roughness: 0.85, side: THREE.DoubleSide });
   const mirror = new THREE.MeshStandardMaterial({ color: 0xb9c6dc, metalness: 1, roughness: 0.14, side: THREE.DoubleSide });
-  const gold = new THREE.MeshStandardMaterial({ color: 0xc8963a, metalness: 1, roughness: 0.46 });
-  const kapton = new THREE.MeshStandardMaterial({ color: 0xc77a26, metalness: 0.9, roughness: 0.5, normalMap: folds, normalScale: new THREE.Vector2(0.7, 0.7) });
-  const blanket = new THREE.MeshStandardMaterial({ color: 0xe6e6e2, roughness: 0.62, normalMap: folds, normalScale: new THREE.Vector2(0.5, 0.5) });
+  const kapton = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, color: 0xc77a26, metalness: 0.9, roughness: 0.5, normalMap: folds, normalScale: new THREE.Vector2(0.7, 0.7) });
+  const wrapping = cloth();
+  const blanket = new THREE.MeshStandardMaterial({ map: wrapping.map, roughness: 0.82, normalMap: wrapping.relief, normalScale: new THREE.Vector2(1.7, 1.7) });
+  const foil = new THREE.MeshStandardMaterial({ color: 0xdfe3e8, metalness: 1, roughness: 0.22, normalMap: folds, normalScale: new THREE.Vector2(0.9, 0.9) }); // crinkled silver insulation
+  const polished = new THREE.MeshStandardMaterial({ color: 0xe2e7ee, metalness: 1, roughness: 0.14, side: THREE.DoubleSide }); // the radiators' mirror finish
+  const iridite = new THREE.MeshStandardMaterial({ color: 0xb59a4c, metalness: 1, roughness: 0.38, side: THREE.DoubleSide }); // gold-tinted treated aluminium
+  const cable = new THREE.MeshStandardMaterial({ color: 0x2c5fd0, roughness: 0.55 });
   const white = new THREE.MeshStandardMaterial({ color: 0xe8e9ea, metalness: 0.05, roughness: 0.62 });
   const alu = new THREE.MeshStandardMaterial({ color: 0xb9bec5, metalness: 1, roughness: 0.44, side: THREE.DoubleSide });
   const dark = new THREE.MeshStandardMaterial({ color: 0x15171a, metalness: 0.45, roughness: 0.5 });
@@ -234,6 +297,9 @@ export function buildSpacecraft(): THREE.Group {
   // the body's origin, so assembled nothing moves.
   const part = (name: string) => { const g = add(new THREE.Group()); g.name = name; return g; };
   const telescope = part('telescope'), radiators = part('radiators');
+  // Inside the telescope, the pieces the scroll teardown on the observatory page takes off one by one.
+  const piece = (name: string) => { const g = add(new THREE.Group(), telescope); g.name = name; return g; };
+  const baffle = piece('baffle'), optics = piece('optics'), legs = piece('legs');
 
   // ── Photon shields: three nested cones, each with a rolled lip. The outer one is white
   //    outside; every other face is bare film. Each inner rim sits a little lower, which gives
@@ -257,24 +323,24 @@ export function buildSpacecraft(): THREE.Group {
   foot.rotation.x = Math.PI / 2;
   // Telescope: a black baffle tube with stiffening ribs outside and light-trapping vanes inside,
   // a dark floor at the bottom, and the floor of the shields around it.
-  const tube = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.27, 1.05, 64, 1, true), black), telescope);
+  const tube = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.27, 1.05, 64, 1, true), black), baffle);
   tube.position.y = 0.62;
-  const tubeLip = add(new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.012, 8, 64), dark), telescope);
+  const tubeLip = add(new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.012, 8, 64), dark), baffle);
   tubeLip.rotation.x = Math.PI / 2;
   tubeLip.position.y = 1.145;
   for (let i = 0; i < 6; i++) {
     const y = 0.22 + i * 0.165, r = 0.272 + (y - 0.095) * (0.03 / 1.05);
-    const rib = add(new THREE.Mesh(new THREE.TorusGeometry(r + 0.006, 0.009, 6, 64), dark), telescope);
+    const rib = add(new THREE.Mesh(new THREE.TorusGeometry(r + 0.006, 0.009, 6, 64), dark), baffle);
     rib.rotation.x = Math.PI / 2;
     rib.position.y = y;
-    const vane = add(new THREE.Mesh(new THREE.RingGeometry(r - 0.05 - i * 0.004, r, 64), black), telescope);
+    const vane = add(new THREE.Mesh(new THREE.RingGeometry(r - 0.05 - i * 0.004, r, 64), black), baffle);
     vane.rotation.x = -Math.PI / 2;
     vane.position.y = y;
   }
   // At the bottom of the tube, the telescope's mirror: a shallow dish, so it catches a glint.
-  const mouth = add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 48, 8, 0, TAU, Math.PI - 0.24, 0.24), mirror), telescope);
+  const mouth = add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 48, 8, 0, TAU, Math.PI - 0.24, 0.24), mirror), baffle);
   mouth.position.y = 0.2 + 1.2 * Math.cos(0.24);
-  const floor = add(new THREE.Mesh(new THREE.RingGeometry(0.27, 0.52, 64), floorMat), radiators);
+  const floor = add(new THREE.Mesh(new THREE.RingGeometry(0.33, 0.52, 64), polished), radiators); // the hole clears the telescope's legs
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = 0.07;
   // What is inside, seen only when the observatory is pulled apart. Built from the clean-room
@@ -285,24 +351,25 @@ export function buildSpacecraft(): THREE.Group {
   // aluminium frame.
   const waffle = isogrid();
   const housingSkin = new THREE.MeshStandardMaterial({ color: 0x9a9da3, map: waffle.map, normalMap: waffle.relief, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.55, metalness: 0.5 });
-  const housing = add(new THREE.Mesh(new RoundedBoxGeometry(0.54, 0.32, 0.44, 2, 0.012), housingSkin), telescope);
+  const housing = add(new THREE.Mesh(new RoundedBoxGeometry(0.54, 0.32, 0.44, 2, 0.012), housingSkin), optics);
   housing.position.y = 0.2;
-  const seat = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.025, 48), rim), telescope); // the bright flange the baffle bolts to
+  const seat = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.025, 48), rim), optics); // the bright flange the baffle bolts to
   seat.position.y = 0.37;
   const detectors = add(new THREE.Mesh(new RoundedBoxGeometry(0.26, 0.22, 0.3, 2, 0.01), housingSkin), telescope);
+  detectors.name = 'detectors';
   detectors.position.set(0.36, 0.34, 0);
   detectors.rotation.z = -0.5;
   [[-0.2, 0.19, 0.225], [0.2, 0.19, 0.225], [-0.2, 0.19, -0.225], [0.2, 0.19, -0.225]].forEach(([x, y, z]) => { // bright corner brackets
-    const bracket = add(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.008), white), telescope);
+    const bracket = add(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.008), white), optics);
     bracket.position.set(x, y + 0.1, z);
   });
-  const wrap = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.05, 6), blanket), telescope); // foil under the housing
+  const wrap = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.05, 6), foil), optics); // foil under the housing
   wrap.position.y = 0.02;
   // The frame the legs stand on: six-sided, bare aluminium with an orange foil edge.
-  const frameRing = add(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.03, 4, 6), alu), telescope);
+  const frameRing = add(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.03, 4, 6), alu), legs);
   frameRing.rotation.x = Math.PI / 2;
   frameRing.position.y = -0.3;
-  const frameEdge = add(new THREE.Mesh(new THREE.TorusGeometry(0.435, 0.008, 4, 6), kapton), telescope);
+  const frameEdge = add(new THREE.Mesh(new THREE.TorusGeometry(0.435, 0.008, 4, 6), kapton), legs);
   frameEdge.rotation.x = Math.PI / 2;
   frameEdge.position.y = -0.3;
   const up = new THREE.Vector3(0, 1, 0);
@@ -310,7 +377,7 @@ export function buildSpacecraft(): THREE.Group {
     const foot = (Math.floor(i / 2) * TAU) / 3 + TAU / 12, top = foot + (i % 2 ? 0.62 : -0.62);
     const from = new THREE.Vector3(Math.cos(top) * 0.27, 0.07, Math.sin(top) * 0.27), to = new THREE.Vector3(Math.cos(foot) * 0.4, -0.28, Math.sin(foot) * 0.4);
     const along = to.clone().sub(from), length = along.length();
-    const leg = add(new THREE.Group(), telescope);
+    const leg = add(new THREE.Group(), legs);
     leg.position.copy(from).add(to).multiplyScalar(0.5);
     leg.quaternion.setFromUnitVectors(up, along.normalize());
     add(new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, length * 0.7, 16), black), leg); // the composite tube
@@ -330,14 +397,14 @@ export function buildSpacecraft(): THREE.Group {
   // ── V-groove radiators: three shallow cones stacked under the shields.
   [0, 1, 2].forEach((i) => {
     const y = -0.03 - i * 0.055;
-    add(new THREE.Mesh(wall(0.46, 0.68 - i * 0.045, y - 0.035, y, 64), alu), radiators);
+    add(new THREE.Mesh(wall(0.46, 0.68 - i * 0.045, y - 0.035, y, 64), polished), radiators).name = `groove${i}`;
   });
   // The orange foil skirt between the radiators and the bus.
   // The radiators hang from a ring of short struts, so they touch the warm bus in few places.
   const hanger = add(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.018, 8, 64), alu), radiators);
   hanger.rotation.x = Math.PI / 2;
   hanger.position.y = -0.345;
-  const neck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.53, 0.2, 48), kapton), radiators);
+  const neck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.53, 0.2, 48, 1, true), kapton), radiators); // a skirt, open: the legs stand inside it
   neck.position.y = -0.24;
 
   // ── Bus: an eight-sided body in white blankets, dark equipment boxes with rounded edges,
@@ -363,31 +430,51 @@ export function buildSpacecraft(): THREE.Group {
   // Equipment on the faces. Angle is around the axis; the solar array is on the -x side.
   const face = (angle: number, w: number, h: number, d: number, y: number, mat: THREE.Material) => {
     const box = add(new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, 0.014), mat), bus);
+    box.name = 'box'; // the teardown pulls every 'box' off the bus
     const r = 0.52 + d / 2;
     box.position.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
     box.rotation.y = -angle + Math.PI / 2;
   };
   const step = TAU / 8;
-  face(step * 0.5, 0.26, 0.34, 0.12, 0.02, dark);
+  face(step * 0.5, 0.26, 0.34, 0.12, 0.02, blanket);
   face(step * 1.5, 0.2, 0.16, 0.1, 0.14, kapton);
   face(step * 1.5, 0.12, 0.2, 0.07, -0.12, dark);
-  face(step * 2.5, 0.3, 0.26, 0.14, -0.04, dark);
-  face(step * -0.5, 0.22, 0.4, 0.09, 0, kapton);
+  face(step * 2.5, 0.3, 0.26, 0.14, -0.04, blanket);
+  face(step * -0.5, 0.22, 0.4, 0.09, 0, blanket);
   face(step * -1.5, 0.28, 0.22, 0.13, 0.08, dark);
-  face(step * -2.5, 0.16, 0.3, 0.08, -0.06, dark);
-  // Two star trackers: short gold barrels angled up and out, with dark apertures.
+  face(step * -2.5, 0.16, 0.3, 0.08, -0.06, foil);
+  // Two star trackers, as photographed: white cones flaring towards their openings, angled up
+  // and out from under the shields.
   [step * 0.1, step * 1.0].forEach((angle, i) => {
     const tracker = add(new THREE.Group(), bus);
-    const barrel = add(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.065, 0.2, 24), gold), tracker);
-    barrel.position.y = 0.1;
-    const hood = add(new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.07, 0.07, 24, 1, true), dark), tracker);
-    hood.position.y = 0.225;
-    const eye = add(new THREE.Mesh(new THREE.CircleGeometry(0.066, 24), black), tracker);
+    tracker.name = 'tracker';
+    const cone = add(new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.052, 0.22, 32), white), tracker);
+    cone.position.y = 0.11;
+    const lip = add(new THREE.Mesh(new THREE.TorusGeometry(0.086, 0.007, 8, 32), white), tracker);
+    lip.rotation.x = Math.PI / 2;
+    lip.position.y = 0.22;
+    const eye = add(new THREE.Mesh(new THREE.CircleGeometry(0.078, 32), black), tracker);
     eye.rotation.x = -Math.PI / 2;
-    eye.position.y = 0.201;
+    eye.position.y = 0.2215;
+    const mount = add(new THREE.Mesh(new RoundedBoxGeometry(0.11, 0.07, 0.11, 2, 0.01), blanket), tracker);
+    mount.position.y = -0.02;
     tracker.position.set(Math.cos(angle) * 0.62, 0.16 - i * 0.06, Math.sin(angle) * 0.62);
     tracker.rotation.set(0, -angle, -0.95, 'YXZ');
   });
+  // The harness: blue cable bundles tied along the faces of the bus, round it and down to the ring.
+  const skin = (a: number) => 0.517 / Math.cos((((a % step) + step) % step) - step / 2) + 0.016; // just off an eight-sided body
+  const run = (points: [number, number][]) => { // each point: angle round the bus, height
+    const curve = new THREE.CatmullRomCurve3(points.map(([a, y]) => new THREE.Vector3(Math.cos(a) * skin(a), y, Math.sin(a) * skin(a))), false, 'catmullrom', 0.2);
+    add(new THREE.Mesh(new THREE.TubeGeometry(curve, points.length * 10, 0.011, 6), cable), bus);
+  };
+  const round = (a0: number, a1: number, y: number, sag = 0.02): [number, number][] =>
+    Array.from({ length: 13 }, (_, k) => [a0 + ((a1 - a0) * k) / 12, y + Math.sin(k * 1.7) * sag] as [number, number]);
+  run(round(step * 0.2, step * 3.4, 0.24));
+  run(round(step * -3.1, step * -0.3, 0.2));
+  run(round(step * 0.9, step * 2.9, -0.22, 0.012));
+  run([[step * 1.1, 0.24], [step * 1.12, 0.1], [step * 1.08, -0.1], [step * 1.1, -0.22], [step * 1.12, -0.33]]);
+  run([[step * -1.0, 0.2], [step * -1.03, 0.02], [step * -0.98, -0.2], [step * -1.0, -0.33]]);
+  run([[step * 2.6, 0.24], [step * 2.63, 0.33]]);
   // Low-gain antennas: two small white cones.
   [step * -3.2, step * 0.2].forEach((angle) => {
     const ant = add(new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 20), white), bus);
@@ -395,9 +482,14 @@ export function buildSpacecraft(): THREE.Group {
     ant.rotation.x = Math.PI;
   });
   // Launch adapter ring and its lower flange.
-  const adapter = add(new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.16, 64, 1, true), alu), bus);
+  const adapter = add(new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.16, 64, 1, true), iridite), bus);
   adapter.position.y = -0.45;
-  const flange = add(new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.03, 10, 64), rim), bus);
+  for (let i = 0; i < 24; i++) { // stiffening ribs round the ring
+    const a = (i * TAU) / 24, rib = add(new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.15, 0.03), iridite), bus);
+    rib.position.set(Math.cos(a) * 0.452, -0.45, Math.sin(a) * 0.452);
+    rib.rotation.y = -a + Math.PI / 2;
+  }
+  const flange = add(new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.03, 10, 64), iridite), bus);
   flange.rotation.x = Math.PI / 2;
   flange.position.y = -0.53;
   const base = add(new THREE.Mesh(new THREE.CircleGeometry(0.43, 48), dark), bus);

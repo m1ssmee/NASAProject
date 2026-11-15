@@ -276,4 +276,10 @@ Requested by the owner: the site felt boxy and busy, and the type too familiar.
   light curve, flags, spectrum and share are `<details>` groups, closed until wanted.
 - **Chapters settle.** On desktop the home page nudges to the top of a chapter when the scroll
   rests near one (`ChapterSnap`, Lenis's snap add-on, proximity only).
+- **Observatory page is a scroll teardown.** One pinned window; every piece's position and the
+  camera are worked out from the scroll (`ObservatoryStory`, `ACTS` and `RIPS`), so scrolling is
+  what pulls it apart: outer shield, inner shields, baffle, telescope, detectors, struts,
+  radiators, bus, solar array, one per act with a note. Pieces strain, let go and fly clear,
+  then all fly home and the observatory backs away into a single star. Without WebGL the same
+  words show as a plain page.
 - Still to do: the new typeface (samples at `/type`, a temporary page; the owner has not chosen).

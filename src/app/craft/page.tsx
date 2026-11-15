@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { FreshData } from '@/components/FreshStrip';
 import { Hop } from '@/components/Hop';
 import { LiveOrbit } from '@/components/LiveOrbit';
-import { Observatory } from '@/components/Observatory';
+import { ObservatoryStory } from '@/components/ObservatoryStory';
 import { Ruler } from '@/components/Ruler';
 import { VideoShelf } from '@/components/VideoShelf';
 import { resources, videos } from '@/data/media';
@@ -35,14 +35,7 @@ export default function Craft() {
   ];
   return (
     <>
-      <header className="page-head wrap grid" style={{ paddingBottom: '1.5rem' }}>
-        <h1 className="display" data-split="lines" data-intro>A telescope in a cone</h1>
-        <p className="lede">SPHEREx is 2.6 metres tall and weighs about as much as a grand piano. Most of what you see is shade.</p>
-      </header>
-
-      <section className="wrap" aria-label="Model and parts" style={{ paddingBottom: 'clamp(3rem, 8vh, 6rem)' }}>
-        <Observatory />
-      </section>
+      <ObservatoryStory />
 
       <section className="obsnum wrap" aria-label="SPHEREx in numbers">
         <dl>

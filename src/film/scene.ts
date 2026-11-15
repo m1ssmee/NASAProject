@@ -125,10 +125,11 @@ export function createFilm(canvas: HTMLCanvasElement, alone = false): Film {
   spherex.rotation.set(0, 0, 0); // the model comes tilted for display; here its axis is the vehicle's
   spherex.traverse((o) => { o.castShadow = o.receiveShadow = true; });
   // At the film's distances the shields' rolled lips and the solar panel's edge strips are
-  // thinner than a pixel, and a sunlit thing that thin draws as a row of dots. Left out here.
+  // thinner than a pixel, as are the cables on the bus, and a sunlit thing that thin draws as a row
+  // of dots. Left out here.
   spherex.traverse((o) => {
     const g = (o as THREE.Mesh).geometry as (THREE.TorusGeometry | THREE.BoxGeometry) | undefined, q = g?.parameters as { tube?: number; height?: number; depth?: number } | undefined;
-    if (q && ((q.tube ?? 1) < 0.035 || (g!.type === 'BoxGeometry' && Math.min(q.height!, q.depth!) <= 0.03))) o.visible = false;
+    if (q && ((q.tube ?? 1) < 0.035 || g!.type === 'TubeGeometry' || (g!.type === 'BoxGeometry' && Math.min(q.height!, q.depth!) <= 0.03))) o.visible = false;
   });
   craft.roll.add(spherex);
   craft.outer.add(craft.roll);

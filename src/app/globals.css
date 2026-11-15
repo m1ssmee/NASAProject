@@ -909,3 +909,26 @@ details.panel:not([open]) { padding-block: 0.35rem; }
 .craftview__tags button:hover b, .craftview__tags button[aria-pressed='true'] b { color: var(--c-accent); }
 .craftview__tags b { font-weight: 500; }
 .craftview__tags i { font-style: normal; letter-spacing: 0; text-transform: none; color: var(--c-muted); }
+
+/* ───────── Observatory: the scroll teardown ─────────
+   A tall section with one window pinned in it. The model fills the window; everything in it,
+   and the words over it, are placed each frame from the scroll (ObservatoryStory). */
+.story { position: relative; margin-top: calc(-1 * var(--header-h)); }
+.story__pin { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+.story__model { position: absolute; inset: 0; width: 100%; height: 100%; }
+.story__star { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px 2px rgb(255 255 255 / 0.8), 0 0 40px 8px rgb(190 210 255 / 0.35); pointer-events: none; opacity: 0; }
+.story__head, .story__notes li { position: absolute; pointer-events: none; }
+.story__head { left: var(--gutter); top: calc(var(--header-h) + clamp(1rem, 5vh, 3rem)); right: var(--gutter); display: grid; gap: 1.25rem; }
+.story__cue { color: var(--c-muted); letter-spacing: 0.1em; text-transform: uppercase; font-size: var(--t-xs); }
+.story__notes li { right: var(--gutter); top: 50%; width: min(27rem, 34vw); translate: 0 calc(-50% + var(--slide, 0rem)); display: grid; gap: 0.9rem; opacity: 0; visibility: hidden; }
+.story__count { color: var(--c-accent); }
+.story__fact { color: var(--c-muted); }
+.story__text { font-size: var(--t-m); line-height: 1.4; text-shadow: 0 0 8px var(--emulsion), 0 0 2px var(--emulsion); }
+@media (max-width: 900px) {
+  .story__notes li { left: var(--gutter); right: var(--gutter); width: auto; top: auto; bottom: 1.25rem; translate: 0 var(--slide, 0rem); gap: 0.45rem; }
+  .story__notes .h-xl { font-size: var(--t-l); }
+  .story__text { font-size: var(--t-body); line-height: 1.38; }
+}
+/* No 3D (WebGL off): the same words as a plain page. */
+.story--plain .story__pin { position: static; height: auto; padding: calc(var(--header-h) + 3rem) var(--gutter) 3rem; }
+.story--plain .story__head, .story--plain .story__notes li { position: static; opacity: 1; visibility: visible; translate: none; width: auto; max-width: 44rem; margin-bottom: 3rem; }
