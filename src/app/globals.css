@@ -892,10 +892,6 @@ html.sky-full .sky { background-color: #05070d; }
 .craftview__tags button::before { content: ''; position: absolute; right: calc(100% + 0.6rem); top: 50%; width: clamp(2rem, 6vw, 5rem); height: 1px; background: rgb(231 233 230 / 0.5); }
 .craftview { border: 0; background: none; }
 
-/* The dive into the full-screen map: the film's SPHEREx over the map, and the dark inside its telescope. */
-.sky__dive { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
-.sky__dive canvas { width: 100%; height: 100%; }
-.sky__dive i { position: absolute; inset: 0; background: #000; opacity: 0; }
 
 /* Viewer: the everyday controls stay open; the rest are one tap away, each under its own name. */
 details.panel > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 2.25rem; }
@@ -1078,3 +1074,24 @@ html:not(.sky-full) .sky__tools .sky__fullbtn:hover, html:not(.sky-full) .sky__t
 .game__copy .outcome { grid-template-columns: 5.5rem minmax(0, 1fr); }
 .game__copy .outcome .read__pic figcaption { font-size: 0.625rem; }
 .game__copy .lede { margin-top: 1rem !important; }
+
+/* In full screen the headline and search stay exactly where they were (pinned to the bottom of
+   the window, over the map) and are only faded, so they can melt away and come back in place. */
+html.sky-full .skyhero__over { position: fixed; inset: auto 0 0 0; z-index: 11; opacity: 0; pointer-events: none; }
+html.sky-full .skyhero__over > * { pointer-events: none; }
+/* In and out of the full sky, slowly: the headline and search melt away over 2.2 s on the way
+   in; on the way out they fade back over 2 s while the sky is still gliding home, and the menu
+   and the map's button follow. */
+.skyhero__over { transition: opacity 2.2s ease-in-out; }
+html.sky-leaving .skyhero__over { opacity: 1; transition: opacity 2s ease-in-out 0.4s; }
+/* Full screen's own controls and readouts leave before the page's text returns. */
+.sky__tools, .sky__found, .sky__readout, .sky__hint, .sky__con { transition: opacity 0.6s ease; }
+html.sky-leaving .sky__tools, html.sky-leaving .sky__found, html.sky-leaving .sky__readout, html.sky-leaving .sky__hint, html.sky-leaving .sky__con, html.sky-leaving .sky__layer { opacity: 0; pointer-events: none; }
+@keyframes sky-fade { from { opacity: 0; } to { opacity: 1; } }
+html.sky-return .skyhero__over { transition: none; }
+html.sky-return .site-header { animation: sky-fade 1.8s ease both; }
+html.sky-return .sky__tools { animation: sky-fade 1.8s ease 0.4s both; }
+/* Full screen's sky is blacker than the page's. The black comes in slowly on the way in, and on
+   the way out it lifts back to the page's colour while the sky glides home, instead of snapping. */
+.sky { transition: background-color 2.6s ease-in-out; }
+html.sky-leaving .sky { background-color: var(--emulsion); }

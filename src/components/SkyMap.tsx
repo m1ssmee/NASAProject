@@ -57,9 +57,10 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [full, setFullState] = useState(false);
   const fullRef = useRef(false);
-  const diving = useRef(false); // the dive in or out is playing
+  const leaving = useRef(false); // the move back out is playing
+  const swingTween = useRef<gsap.core.Tween | null>(null);
+  const home = useRef<{ ra: number; dec: number; fov: number } | null>(null); // the view full screen began from
   const fillTween = useRef<gsap.core.Tween | null>(null);
-  const glowTween = useRef<gsap.core.Tween | null>(null);
   const readout = useRef<HTMLParagraphElement>(null);
   const drag = useRef<{ x: number; y: number; moved: number; id: number } | null>(null);
 
@@ -256,6 +257,10 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         gsap.ticker.add(tick);
         setState('ready');
         joinFilm(created, reduced, (full) => { fullscreen = full; measure(); });
+        // Fetch the Milky Way for full screen while nothing else is happening, so the way in has
+        // nothing left to load. (ponytail: no idle callback in Safari; a plain delay does there.)
+        const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 6000 }) : setTimeout(fn, 2500));
+        idle(() => { if (!dead) created?.loadMilkyWay('/sky/milkyway.webp'); });
       } catch {
         endIntro();
         if (!dead) setState('nogl');
@@ -275,45 +280,37 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     };
   }, [playFigure]);
 
-  // The way into the full sky and back out: SPHEREx hangs in front of the stars, the camera goes
-  // down its telescope into the dark, and the stars come up (the last beat of the launch film,
-  // played on the clock). Backwards on the way out. Resolves false if it could not play.
-  const dive = useCallback(async (from: number, to: number, seconds: number) => {
-    const s = sky.current, el = host.current;
-    if (!s || !el || diving.current || matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-    diving.current = true;
-    const box = document.createElement('div');
-    box.className = 'sky__dive';
-    box.innerHTML = '<canvas></canvas><i></i>';
-    try {
-      const [{ createFilm }, { picture }] = await Promise.all([import('@/film/scene'), import('@/film/beats')]);
-      const film = createFilm(box.firstElementChild as HTMLCanvasElement, true);
-      el.dataset.filling = '';
-      document.body.appendChild(box);
-      film.resize(innerWidth, innerHeight);
-      const t = { v: from }, dark = box.lastElementChild as HTMLElement;
-      await gsap.to(t, {
-        v: to, duration: seconds, ease: 'power1.inOut',
-        onUpdate: () => {
-          const pic = picture(t.v);
-          film.frame(pic, gsap.ticker.time);
-          s.setFill(pic.stars);
-          dark.style.opacity = String(pic.done ? 0 : pic.dark);
-          box.style.opacity = String(Math.min(1, (t.v - 0.8) / 0.025)); // SPHEREx fades in and out at the near end
-        },
-      });
-      film.dispose();
-      return true;
-    } catch {
-      return false; // no WebGL or a failed load: the plain fill below
-    } finally {
-      box.remove();
-      delete el.dataset.filling;
-      diving.current = false;
-    }
-  }, []);
+  // The way into the full sky: the camera pulls back and turns a little, so far more of the sky
+  // opens up around the patch you were looking at, while the Milky Way and the stars' colours
+  // come up. One move on the map itself, nothing loaded or built while it plays. Out is the same
+  // move backwards, to where you came in.
+  const swing = useCallback((enter: boolean) => new Promise<void>((done) => {
+    const s = sky.current, v = view.current;
+    swingTween.current?.kill();
+    if (!s || matchMedia('(prefers-reduced-motion: reduce)').matches) { s?.setGlow(enter ? 1 : 0); done(); return; }
+    if (enter) home.current = { ra: v.ra, dec: v.dec, fov: v.fov };
+    const back = home.current ?? { ra: v.ra, dec: v.dec, fov: v.fov };
+    const from = { ra: v.ra, dec: v.dec, fov: v.fov, glow: enter ? 0 : 1 };
+    const to = enter
+      ? { ra: back.ra - 9, dec: back.dec - 4, fov: Math.min(FOV_MAX, back.fov * 1.45), glow: 1 }
+      : { ...back, glow: 0 };
+    const dra = ((to.ra - from.ra + 540) % 360) - 180; // the short way round
+    const k = { t: 0 };
+    swingTween.current = gsap.to(k, {
+      t: 1, duration: enter ? 2.4 : 2.2, ease: enter ? 'power3.inOut' : 'power2.inOut',
+      onUpdate: () => {
+        v.ra = (from.ra + dra * k.t + 360) % 360;
+        v.dec = from.dec + (to.dec - from.dec) * k.t;
+        v.fov = from.fov + (to.fov - from.fov) * k.t;
+        // The Milky Way leads on the way in and goes first on the way out.
+        s.setGlow(enter ? Math.min(1, k.t * 1.4) : Math.max(0, 1 - k.t * 1.6));
+        dirty.current = true;
+      },
+      onComplete: () => done(),
+    });
+  }), []);
 
-  // Full screen: SPHEREx takes you in, and the whole window is the map.
+  // Full screen: the whole window is the map.
   const applyFull = useCallback((next: boolean) => {
     if (fullRef.current === next) return;
     fullRef.current = next;
@@ -322,7 +319,6 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     const html = document.documentElement;
     html.classList.toggle('sky-full', next);
     fillTween.current?.kill();
-    glowTween.current?.kill();
     const s = sky.current, el = host.current;
     if (next) {
       // Each visit to the full sky starts fresh: every figure plays once as it is come across.
@@ -342,31 +338,17 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
           .catch(() => {}); // the map works without the figures
       }
       // The Milky Way and the stronger star colours come up once the stars are in.
-      if (s) {
-        s.loadMilkyWay('/sky/milkyway.webp');
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) s.setGlow(1);
-        else {
-          const g = { v: 0 };
-          glowTween.current = gsap.to(g, { v: 1, duration: 2.2, delay: 1.7, ease: 'power1.inOut', onUpdate: () => s.setGlow(g.v) });
-        }
-      }
+      s?.loadMilkyWay('/sky/milkyway.webp'); // already fetched while the page was idle; this is a no-op then
+      s?.setFill(1);
       stopScroll();
-      // Ask the browser for real full screen too; where that is refused the map still fills the window.
-      html.requestFullscreen?.().catch(() => {});
-      if (s && el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        dive(0.8, 1, 3.4).then((played) => {
-          if (played || !fullRef.current) return s.setFill(1);
-          // The old way in, if the dive could not play: black, then the stars come up.
-          const f = { v: 0 };
-          s.setFill(0);
-          el.dataset.filling = '';
-          fillTween.current = gsap.to(f, {
-            v: 1, duration: 1.8, delay: 0.5, ease: 'power2.in',
-            onUpdate: () => s.setFill(f.v),
-            onComplete: () => { delete el.dataset.filling; },
-          });
-        });
-      }
+      // Ask the browser for real full screen too (where it is refused the map still fills the
+      // window), and start the move only once the window has finished changing size, so the
+      // resize does not land in the middle of it.
+      let started = false;
+      const go = () => { if (!started && fullRef.current) { started = true; swing(true); } };
+      document.addEventListener('fullscreenchange', () => setTimeout(go, 60), { once: true });
+      setTimeout(go, 320);
+      html.requestFullscreen?.().catch(go);
     } else {
       playing.current?.kill();
       playing.current = null;
@@ -377,6 +359,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       conLabel.current?.classList.remove('is-on');
       setLinesOn(false);
       startScroll();
+      swingTween.current?.kill();
       s?.setGlow(0);
       s?.setFill(1);
       if (el) delete el.dataset.filling;
@@ -384,12 +367,29 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     }
     touched.current = gsap.ticker.time;
     dirty.current = true;
-  }, [setPick, dive]);
+  }, [setPick, swing]);
   const setFull = useCallback((next: boolean) => {
-    if (fullRef.current === next || diving.current) return;
-    if (next) applyFull(true);
-    else dive(1, 0.8, 1.5).then(() => applyFull(false)); // out the way we came in, then leave
-  }, [applyFull, dive]);
+    if (fullRef.current === next || leaving.current) return;
+    if (next) { applyFull(true); return; }
+    leaving.current = true;
+    // The page's own text fades back in slowly while the sky is still gliding home, so it is
+    // already there when the move ends; the menu follows.
+    const html = document.documentElement;
+    html.classList.add('sky-leaving');
+    // Full screen's own things bow out first: the constellation being drawn, its name, the tools.
+    playing.current?.kill();
+    playing.current = null;
+    conLabel.current?.classList.remove('is-on');
+    const L = lineState.current;
+    gsap.to(L, { alpha: 0, all: 0, duration: 0.7, ease: 'power1.out', onUpdate: () => sky.current?.setLines(L) });
+    swing(false).then(() => {
+      leaving.current = false;
+      html.classList.add('sky-return');
+      applyFull(false);
+      html.classList.remove('sky-leaving');
+      setTimeout(() => html.classList.remove('sky-return'), 2400);
+    }); // back the way we came, then leave
+  }, [applyFull, swing]);
   useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && fullRef.current && !pickRef.current) setFull(false); };

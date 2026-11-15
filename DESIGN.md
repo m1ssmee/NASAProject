@@ -269,9 +269,12 @@ Requested by the owner: the site felt boxy and busy, and the type too familiar.
   chapter (`Tabs`, every panel stays in the page, hidden not removed).
 - **Pull-apart SPHEREx.** The model is built from named parts; "Pull it apart" on the model
   separates them along the axis with a name beside each (`CraftView`, `APART`).
-- **Into the full-screen map through SPHEREx.** The black screen is replaced by the launch
-  film's last beat with no rocket: SPHEREx in front of the stars, down its telescope, stars up
-  (`dive` in `SkyMap.tsx`). Leaving plays it backwards. Without WebGL the old fill still runs.
+- **Into the full-screen map.** The camera pulls back and turns a little, so far more of the
+  sky opens around the patch you were on, while the Milky Way and the star colours come up; out
+  is the same move backwards to where you came in (`swing` in `SkyMap.tsx`). It replaced a dive
+  through SPHEREx that built a second 3D scene on every click and stuttered. The Milky Way is
+  fetched and uploaded while the page is idle, and the move waits for the browser's own full
+  screen to finish resizing the window.
 - **Viewer.** Position, detector and grouping stay open; stacking, display, plate details,
   light curve, flags, spectrum and share are `<details>` groups, closed until wanted.
 - **Chapters settle.** On desktop the home page nudges to the top of a chapter when the scroll

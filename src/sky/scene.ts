@@ -361,6 +361,7 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
         t.minFilter = THREE.LinearFilter;
         t.generateMipmaps = false;
         glowUniforms.uMap.value = t;
+        renderer.initTexture(t); // upload it now, not on the first frame it is seen
         applyGlow();
       }, undefined, () => { glowAsked = false; });
     },

@@ -58,8 +58,7 @@ function surroundings(renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarget {
   return map;
 }
 
-/** `alone`: only SPHEREx, no rocket (for the dive into the full-screen map). */
-export function createFilm(canvas: HTMLCanvasElement, alone = false): Film {
+export function createFilm(canvas: HTMLCanvasElement): Film {
   const small = matchMedia('(max-width: 767px), (pointer: coarse)').matches;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
   // Sharpness steps down if the machine cannot keep up: a smooth film matters more.
@@ -96,7 +95,6 @@ export function createFilm(canvas: HTMLCanvasElement, alone = false): Film {
 
   const vehicle = createVehicle(scene);
   const { booster, upper, noses } = vehicle;
-  if (alone) booster.outer.visible = upper.outer.visible = false;
   const plume = createPlume(BOOSTER), core = createPlume(CORE), jet = createPlume(ENGINE), vacuum = createPlume(VACUUM);
   plume.mesh.position.y = core.mesh.position.y = TAIL - 0.9;
   // Oxygen boiling off both cold tanks and streaming back along the body.
