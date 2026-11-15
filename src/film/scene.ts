@@ -142,7 +142,10 @@ export function createFilm(canvas: HTMLCanvasElement, alone = false): Film {
   const PANEL = new THREE.Vector3(-1.02, -0.95, 0), PANEL_FACES = new THREE.Vector3(-1, 0, 0);
   const glint = new THREE.Vector3(), faces = new THREE.Vector3(), toLens = new THREE.Vector3();
   const tags = new Float32Array(14);
-  const tag = (i: number) => { point.project(camera); tags[i * 2] = (point.x * 0.5 + 0.5) * width; tags[i * 2 + 1] = (0.5 - point.y * 0.5) * height; };
+  // The names are placed through a steady copy of the camera: where it would be with no shake or
+  // hand-held sway, so the names hold still enough to read while the picture shakes.
+  const steady = new THREE.PerspectiveCamera();
+  const tag = (i: number) => { point.project(steady); tags[i * 2] = (point.x * 0.5 + 0.5) * width; tags[i * 2 + 1] = (0.5 - point.y * 0.5) * height; };
   let aspect = 1, blank = false;
   // No painted or metal surface may come out much brighter than sunlit white. A glint hundreds
   // of times brighter, on an edge thinner than a pixel, turns into a string of bright beads that
@@ -274,6 +277,10 @@ export function createFilm(canvas: HTMLCanvasElement, alone = false): Film {
       );
       camera.rotation.z = jitter(clock, 59, 97, 151, 4.1) * 0.0035 * pic.shake;
       camera.updateMatrixWorld();
+      steady.copy(camera);
+      steady.position.set(0, 0, camera.position.z);
+      steady.rotation.set(0, 0, 0);
+      steady.updateMatrixWorld();
 
       // Behind it all.
       const u = backdrop.uniforms;

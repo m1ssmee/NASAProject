@@ -42,7 +42,9 @@ export default async function Home() {
   return (
     <>
       <LaunchFilm />
-      <ChapterSnap />
+      <ChapterSnap select=".snap-top, .chapter" />
+      {/* Where the page settles at the top: the very top, menu and all, not the hero under the menu. */}
+      <div className="snap-top" aria-hidden="true" />
       <section className="skyhero" aria-labelledby="hero-h">
         <SkyMap fresh={fresh.fields.slice(0, 40)} />
         <div className="skyhero__over grid">
@@ -140,7 +142,7 @@ export default async function Home() {
           <p className="lede" style={{ marginTop: '1.25rem' }} data-reveal="fade">SPHEREx is 2.6 metres tall and weighs about as much as a grand piano. Most of what you see is shade.</p>
           <p style={{ marginTop: '2rem' }}><Link href="/craft" className="btn">See how it is built</Link></p>
         </div>
-        <div className="craftchap__model"><CraftView explodable /></div>
+        <div className="craftchap__model"><CraftView /></div>
       </section>
 
       {/* Chapter 5: from NASA. */}

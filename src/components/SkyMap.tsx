@@ -593,13 +593,13 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       )}
 
       <div className="sky__tools" role="group" aria-label="Map controls">
-        <button type="button" className="sky__fullbtn" onClick={() => setFull(!full)} aria-pressed={full} aria-label={full ? 'Leave full screen' : 'Full screen'}>
+        <button type="button" className="sky__fullbtn" onClick={() => setFull(!full)} aria-pressed={full} aria-label={full ? 'Leave full screen' : 'Explore the full sky'}>
           <svg viewBox="0 0 16 16" aria-hidden="true">
             {full
               ? <path d="M6 1v5H1M10 1v5h5M6 15v-5H1M10 15v-5h5" />
               : <path d="M1 6V1h5M15 6V1h-5M1 10v5h5M15 10v5h-5" />}
           </svg>
-          <span>{full ? 'Exit' : 'Full screen'}</span>
+          <span>{full ? 'Exit' : 'Explore the full sky'}</span>
         </button>
         <button type="button" onClick={() => nudge(0, 0, 0.75)} aria-label="Zoom in">+</button>
         <button type="button" onClick={() => nudge(0, 0, 1.33)} aria-label="Zoom out">&minus;</button>

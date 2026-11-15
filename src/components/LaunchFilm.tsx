@@ -39,6 +39,9 @@ export function LaunchFilm() {
     const held = new URLSearchParams(location.search).get('film');
     let target = 0, p = 0; // scroll progress, 0 to 1
     let film: Film | null = null, ended = false, passed = -1, second = -1, touchY = 0;
+    // The name tags' positions, lightly smoothed (they already ignore the camera's shake; see
+    // scene.ts), so the last frame-to-frame flutter goes too.
+    const calm = new Float32Array(14).fill(NaN);
 
     // The track is an arc of a large circle, like a horizon. Its geometry follows the window.
     let along = (f: number) => ({ x: f, y: 0 });
@@ -86,7 +89,8 @@ export function LaunchFilm() {
 
       // Name tags follow what they name. The rocket's leads up and left, SPHEREx's up and right,
       // each PUNCH satellite's away from the stage it left, so the four never share a corner.
-      const at = film.tags;
+      const raw = film.tags, at = calm;
+      for (let k = 0; k < 14; k++) at[k] = Number.isNaN(at[k]) || held !== null ? raw[k] : at[k] + (raw[k] - at[k]) * 0.35;
       tags.current?.querySelectorAll('g').forEach((g, i) => {
         // A tag fades out as its satellite drifts down into the timeline.
         const shown = pic.names[i < 2 ? i : i < 4 ? 2 : 3] * Math.min(1, Math.max(0, (innerHeight - 150 - at[i * 2 + 1]) / 40));
