@@ -170,8 +170,7 @@ a:active .hop__t, button:active .hop__t { translate: 0.28em -0.16em; }
   position: fixed; inset: 0 0 auto 0; z-index: var(--z-header); height: var(--header-h);
   display: flex; align-items: center; justify-content: space-between;
   padding-inline: var(--gutter);
-  /* No ruled bar: a soft frosted strip, so text scrolling under the menu stays readable. */
-  background: rgb(16 18 20 / 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: var(--emulsion); /* solid: anything scrolling under the menu must not show through it */
   font-size: var(--t-s);
 }
 .wordmark { display: inline-flex; align-items: center; gap: 0.65em; font-weight: 680; font-stretch: 78%; font-size: 1.05rem; letter-spacing: -0.01em; min-height: 2.75rem; white-space: nowrap; }
@@ -889,8 +888,8 @@ html.sky-full .sky { background-color: #05070d; }
 .craftview__apart { position: absolute; left: 1rem; bottom: 1rem; background: rgb(16 18 20 / 0.6); backdrop-filter: blur(6px); }
 .craftview__tags { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .craftview__tags li { position: absolute; left: 0; top: 0; }
-.craftview__tags span { position: absolute; left: clamp(5rem, 13vw, 11rem); top: -0.6em; white-space: nowrap; font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; }
-.craftview__tags span::before { content: ''; position: absolute; right: calc(100% + 0.6rem); top: 50%; width: clamp(2rem, 6vw, 5rem); height: 1px; background: rgb(231 233 230 / 0.5); }
+.craftview__tags button { position: absolute; left: clamp(5rem, 13vw, 11rem); top: -0.6em; white-space: nowrap; font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+.craftview__tags button::before { content: ''; position: absolute; right: calc(100% + 0.6rem); top: 50%; width: clamp(2rem, 6vw, 5rem); height: 1px; background: rgb(231 233 230 / 0.5); }
 .craftview { border: 0; background: none; }
 
 /* The dive into the full-screen map: the film's SPHEREx over the map, and the dark inside its telescope. */
@@ -905,3 +904,8 @@ details.panel > summary::after { content: '+'; font-size: 1.1rem; font-weight: 4
 details.panel[open] > summary::after { content: '\2212'; }
 details.panel > summary:hover { color: var(--c-fg); }
 details.panel:not([open]) { padding-block: 0.35rem; }
+
+.craftview__tags button { display: grid; gap: 0.15rem; top: -0.9em; text-align: left; pointer-events: auto; }
+.craftview__tags button:hover b, .craftview__tags button[aria-pressed='true'] b { color: var(--c-accent); }
+.craftview__tags b { font-weight: 500; }
+.craftview__tags i { font-style: normal; letter-spacing: 0; text-transform: none; color: var(--c-muted); }

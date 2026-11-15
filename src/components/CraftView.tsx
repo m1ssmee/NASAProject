@@ -9,14 +9,22 @@ export interface CraftAngle { x: number; y: number }
 // Pulled apart, each piece moves this far along the axis (and the solar panel also sideways),
 // in metres. Chosen so the stack stays centred on where the whole observatory was.
 const APART: Record<string, [number, number]> = {
-  telescope: [0, 1.9], shield2: [0, 1.0], shield1: [0, 0.2], shield0: [0, -0.55], radiators: [0, -1.1], bus: [0, -1.85], array: [-0.9, -1.85],
+  shield0: [0, 1.75], shield1: [0, 1.25], shield2: [0, 0.75], telescope: [0, -0.55], radiators: [0, -1.2], bus: [0, -2.1], array: [-0.7, -2.1],
 };
-// A name beside each piece once they are apart: which piece, and how high up it its middle is.
-const NAMES: [string, string, number][] = [
-  ['telescope', 'Telescope', 0.65], ['shield1', 'Photon shields', 0.75], ['radiators', 'V-groove radiators', -0.1], ['bus', 'Spacecraft bus', -0.68], ['array', 'Solar array', -1.3],
+// The shields lift off (the telescope stands inside them), the rest drops away. The pieces leave in this order, each starting a little after the one before.
+const ORDER = ['shield0', 'shield1', 'shield2', 'telescope', 'radiators', 'bus', 'array'];
+// Beside each piece once they are apart: which piece, its name, one fact, and how high up its
+// middle is.
+const NAMES: [string, string, string, number][] = [
+  ['telescope', 'Telescope', 'Three mirrors, six detectors', 0.3],
+  ['shield1', 'Photon shields', 'Three cones, 3.2 m across, 1.7 m tall', 0.75],
+  ['radiators', 'V-groove radiators', 'Three rings that shed heat to space', -0.1],
+  ['bus', 'Spacecraft bus', 'Computer, battery, reaction wheels, radios', -0.68],
+  ['array', 'Solar array', '2.67 m by 1.02 m, about 750 W', -1.0],
 ];
 
-export function CraftView({ target, onUserTurn, explodable = false }: { target?: CraftAngle | null; onUserTurn?: () => void; explodable?: boolean }) {
+/** `focus`: a piece to come in close on while it is pulled apart (one of the names in APART). */
+export function CraftView({ target, onUserTurn, explodable = false, focus = null }: { target?: CraftAngle | null; onUserTurn?: () => void; explodable?: boolean; focus?: string | null }) {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const rot = useRef<CraftAngle>({ x: 0.34, y: 0.75 });
@@ -26,6 +34,9 @@ export function CraftView({ target, onUserTurn, explodable = false }: { target?:
   const [apart, setApart] = useState(false);
   const open = useRef({ v: 0 }); // 0 assembled, 1 pulled apart
   const tags = useRef<HTMLUListElement>(null);
+  const [picked, setPicked] = useState<string | null>(null); // a name tapped on the model itself
+  const near = useRef({ v: 0, part: '' }); // how far in on one piece the camera is
+  const wanted = apart ? focus ?? picked : null;
 
   useEffect(() => { userTurn.current = onUserTurn; }, [onUserTurn]);
 
@@ -49,6 +60,13 @@ export function CraftView({ target, onUserTurn, explodable = false }: { target?:
     return () => { tween.kill(); turn?.kill(); };
   }, [apart]);
 
+  // Come in close on one piece, or back out to all of them.
+  useEffect(() => {
+    if (wanted) near.current.part = wanted;
+    const tween = gsap.to(near.current, { v: wanted ? 1 : 0, duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1.1, ease: 'power3.inOut' });
+    return () => { tween.kill(); };
+  }, [wanted]);
+
   useEffect(() => {
     let dead = false;
     let stop = () => {};
@@ -62,6 +80,9 @@ export function CraftView({ target, onUserTurn, explodable = false }: { target?:
         const stage = buildCraftStage(renderer);
         const pieces = Object.entries(APART).map(([name, by]) => [stage.craft.getObjectByName(name)!, by] as const);
         const at = new THREE.Vector3();
+        // Apart, the dark telescope needs a little light from all round to be read at all.
+        const lift = new THREE.HemisphereLight(0xc6d4ff, 0x3a3f4a, 0);
+        stage.scene.add(lift);
         let far = 9.2, was = -1;
         const size = () => {
           const r = el.getBoundingClientRect();
@@ -119,15 +140,27 @@ export function CraftView({ target, onUserTurn, explodable = false }: { target?:
           const e = open.current.v;
           if (e !== was) { // the pieces slide along the axis and the camera steps back to keep them in view
             was = e;
-            pieces.forEach(([g, [dx, dy]]) => g.position.set(dx * e, dy * e, 0));
-            stage.camera.position.set(0, 0, far * (1 + 0.6 * e));
+            pieces.forEach(([g, [dx, dy]]) => {
+              const u = Math.min(1, Math.max(0, e * 1.6 - ORDER.indexOf(g.name) * 0.1)), k = u * u * (3 - 2 * u);
+              g.position.set(dx * k, dy * k, 0);
+            });
           }
+          // The camera steps back to keep every piece in view, then in on one if asked.
+          const n = near.current;
+          let level = 0;
+          if (n.v > 0 && n.part) {
+            const row = NAMES.find(([name]) => name === n.part || (n.part.startsWith('shield') && name === 'shield1'));
+            at.set(n.part === 'array' ? -0.6 : 0, (row?.[3] ?? 0) - 0.2, 0);
+            level = stage.craft.getObjectByName(row?.[0] ?? n.part)!.localToWorld(at).y;
+          }
+          stage.camera.position.set(0, level * n.v, far * (1 + 0.5 * e) * (1 - 0.58 * n.v));
+          lift.intensity = 1.1 * e;
           renderer.render(stage.scene, stage.camera);
           // Names ride beside their pieces, level with each one's middle.
           const list = tags.current;
           if (list) {
             list.style.opacity = String(Math.max(0, e * 2 - 1));
-            if (e > 0.5) NAMES.forEach(([name, , y], i) => {
+            if (e > 0.5) NAMES.forEach(([name, , , y], i) => {
               const g = stage.craft.getObjectByName(name)!, r = el.getBoundingClientRect();
               at.set(name === 'array' ? -1 : 0, y - 0.2, 0);
               g.localToWorld(at).project(stage.camera);
@@ -161,8 +194,14 @@ export function CraftView({ target, onUserTurn, explodable = false }: { target?:
       <canvas ref={canvas} aria-hidden="true" />
       {explodable && !failed && (
         <>
-          <ul ref={tags} className="craftview__tags" aria-hidden="true">
-            {NAMES.map(([part, name]) => <li key={part}><span>{name}</span></li>)}
+          <ul ref={tags} className="craftview__tags" aria-label="Parts: choose one to look closer">
+            {NAMES.map(([part, name, fact]) => (
+              <li key={part}>
+                <button type="button" tabIndex={apart ? 0 : -1} aria-pressed={wanted === part} onPointerDown={(e) => e.stopPropagation()} onClick={() => setPicked(picked === part ? null : part)}>
+                  <b>{name}</b><i>{fact}</i>
+                </button>
+              </li>
+            ))}
           </ul>
           <button type="button" className="btn btn--quiet craftview__apart" aria-pressed={apart} onPointerDown={(e) => e.stopPropagation()} onClick={() => setApart(!apart)}>
             {apart ? 'Put it back together' : 'Pull it apart'}

@@ -138,7 +138,7 @@ export function createFilm(canvas: HTMLCanvasElement, alone = false): Film {
     (Math.sin(c * f1 + ph) + 0.7 * Math.sin(c * f2 + ph * 1.7) + 0.5 * Math.sin(c * f3 + ph * 0.6)) / 2.2;
   const point = new THREE.Vector3(), sunAt = new THREE.Vector3();
   // The solar panel's glass, in the spacecraft's own frame: its middle, and the way it faces.
-  const PANEL = new THREE.Vector3(-1.02, -0.86, 0), PANEL_FACES = new THREE.Vector3(-1, 0, 0);
+  const PANEL = new THREE.Vector3(-1.02, -0.95, 0), PANEL_FACES = new THREE.Vector3(-1, 0, 0);
   const glint = new THREE.Vector3(), faces = new THREE.Vector3(), toLens = new THREE.Vector3();
   const tags = new Float32Array(14);
   const tag = (i: number) => { point.project(camera); tags[i * 2] = (point.x * 0.5 + 0.5) * width; tags[i * 2 + 1] = (0.5 - point.y * 0.5) * height; };

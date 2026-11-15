@@ -27,7 +27,7 @@ export function Observatory() {
   return (
     <div className="obs grid">
       <div className="obs__model">
-        <CraftView explodable target={part?.view ?? null} onUserTurn={() => setOpen(null)} />
+        <CraftView explodable focus={part ? ({ shields: 'shield1', trackers: 'bus' } as Record<string, string>)[part.id] ?? part.id : null} target={part?.view ?? null} onUserTurn={() => setOpen(null)} />
         <p className="small muted" style={{ marginTop: '0.6rem' }}>Drag to turn it, or pick a part.</p>
       </div>
       <ul className="obs__parts">

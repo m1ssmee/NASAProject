@@ -181,6 +181,23 @@ function filmTexture(): THREE.Texture {
   return t;
 }
 
+/** A machined waffle: square pockets cut into black metal, leaving thin ribs. Colour and relief. */
+function isogrid(): { map: THREE.Texture; relief: THREE.Texture } {
+  const draw = (g: CanvasRenderingContext2D, rib: string, pocket: string) => {
+    g.fillStyle = rib;
+    g.fillRect(0, 0, 256, 256);
+    g.fillStyle = pocket;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) g.fillRect(x * 32 + 3, y * 32 + 3, 26, 26);
+  };
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  draw(c.getContext('2d')!, '#2b2d31', '#0f1012');
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
+  return { map, relief: relief(256, 256, 3, (g) => draw(g, '#b0b0b0', '#404040')) };
+}
+
 export function buildSpacecraft(): THREE.Group {
   const craft = new THREE.Group();
   const body = new THREE.Group();
@@ -260,6 +277,55 @@ export function buildSpacecraft(): THREE.Group {
   const floor = add(new THREE.Mesh(new THREE.RingGeometry(0.27, 0.52, 64), floorMat), radiators);
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = 0.07;
+  // What is inside, seen only when the observatory is pulled apart. Built from the clean-room
+  // footage of the real telescope: under the ribbed baffle is a black housing machined into a
+  // waffle of pockets, which holds the three mirrors; a second, smaller waffled box leans off
+  // its side, holding the six detectors; and the whole instrument stands on three pairs of fat
+  // black composite legs, which let almost no heat climb up from the warm bus, on a six-sided
+  // aluminium frame.
+  const waffle = isogrid();
+  const housingSkin = new THREE.MeshStandardMaterial({ color: 0x9a9da3, map: waffle.map, normalMap: waffle.relief, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.55, metalness: 0.5 });
+  const housing = add(new THREE.Mesh(new RoundedBoxGeometry(0.54, 0.32, 0.44, 2, 0.012), housingSkin), telescope);
+  housing.position.y = 0.2;
+  const seat = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.025, 48), rim), telescope); // the bright flange the baffle bolts to
+  seat.position.y = 0.37;
+  const detectors = add(new THREE.Mesh(new RoundedBoxGeometry(0.26, 0.22, 0.3, 2, 0.01), housingSkin), telescope);
+  detectors.position.set(0.36, 0.34, 0);
+  detectors.rotation.z = -0.5;
+  [[-0.2, 0.19, 0.225], [0.2, 0.19, 0.225], [-0.2, 0.19, -0.225], [0.2, 0.19, -0.225]].forEach(([x, y, z]) => { // bright corner brackets
+    const bracket = add(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.008), white), telescope);
+    bracket.position.set(x, y + 0.1, z);
+  });
+  const wrap = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.05, 6), blanket), telescope); // foil under the housing
+  wrap.position.y = 0.02;
+  // The frame the legs stand on: six-sided, bare aluminium with an orange foil edge.
+  const frameRing = add(new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.03, 4, 6), alu), telescope);
+  frameRing.rotation.x = Math.PI / 2;
+  frameRing.position.y = -0.3;
+  const frameEdge = add(new THREE.Mesh(new THREE.TorusGeometry(0.435, 0.008, 4, 6), kapton), telescope);
+  frameEdge.rotation.x = Math.PI / 2;
+  frameEdge.position.y = -0.3;
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 6; i++) {
+    const foot = (Math.floor(i / 2) * TAU) / 3 + TAU / 12, top = foot + (i % 2 ? 0.62 : -0.62);
+    const from = new THREE.Vector3(Math.cos(top) * 0.27, 0.07, Math.sin(top) * 0.27), to = new THREE.Vector3(Math.cos(foot) * 0.4, -0.28, Math.sin(foot) * 0.4);
+    const along = to.clone().sub(from), length = along.length();
+    const leg = add(new THREE.Group(), telescope);
+    leg.position.copy(from).add(to).multiplyScalar(0.5);
+    leg.quaternion.setFromUnitVectors(up, along.normalize());
+    add(new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, length * 0.7, 16), black), leg); // the composite tube
+    [-1, 1].forEach((end) => { // its metal end fittings
+      const fitting = add(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, length * 0.15, 12), rim), leg);
+      fitting.position.y = end * length * 0.425;
+      if (end < 0) fitting.rotation.x = Math.PI;
+    });
+  }
+  // Each inner shield stands on its own ring.
+  [1, 2].forEach((i) => {
+    const ring = add(new THREE.Mesh(new THREE.TorusGeometry(shields[i].bottom, 0.014, 8, 96), alu), shieldParts[i]);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = shields[i].y0;
+  });
 
   // ── V-groove radiators: three shallow cones stacked under the shields.
   [0, 1, 2].forEach((i) => {
@@ -267,6 +333,10 @@ export function buildSpacecraft(): THREE.Group {
     add(new THREE.Mesh(wall(0.46, 0.68 - i * 0.045, y - 0.035, y, 64), alu), radiators);
   });
   // The orange foil skirt between the radiators and the bus.
+  // The radiators hang from a ring of short struts, so they touch the warm bus in few places.
+  const hanger = add(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.018, 8, 64), alu), radiators);
+  hanger.rotation.x = Math.PI / 2;
+  hanger.position.y = -0.345;
   const neck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.53, 0.2, 48), kapton), radiators);
   neck.position.y = -0.24;
 
@@ -279,6 +349,15 @@ export function buildSpacecraft(): THREE.Group {
   add(new THREE.Mesh(hull, blanket), bus);
   const topDeck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.035, 8), alu), bus);
   topDeck.position.y = 0.355;
+  // On the top deck, under everything: the collar the instrument's cables pass through and the
+  // six pads its legs stand on.
+  const collar = add(new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 32), dark), bus);
+  collar.position.y = 0.395;
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.floor(i / 2) * TAU) / 3 + 0.5 + (i % 2 ? 0.5 : -0.5);
+    const pad = add(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.03, 16), alu), bus);
+    pad.position.set(Math.cos(a) * 0.4, 0.385, Math.sin(a) * 0.4);
+  }
   const bottomDeck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.035, 8), alu), bus);
   bottomDeck.position.y = -0.355;
   // Equipment on the faces. Angle is around the axis; the solar array is on the -x side.
@@ -328,8 +407,8 @@ export function buildSpacecraft(): THREE.Group {
   // ── Solar array: one flat panel along the sun side (-x), cells facing out, cable runs on
   //    the back, an aluminium edge frame, hinge brackets, and two struts holding it off the bus.
   const array = part('array');
-  array.position.set(-1.0, -0.66, 0);
-  const W = 1.5, H = 1.62, T = 0.035;
+  array.position.set(-1.0, -0.75, 0);
+  const W = 2.67, H = 1.02, T = 0.035; // 2.67 m by 1.02 m (JPL press kit), long side across
   const front = add(new THREE.Mesh(new THREE.PlaneGeometry(W, H), cells), array);
   front.rotation.y = -Math.PI / 2;
   front.position.x = -T / 2 - 0.002;
