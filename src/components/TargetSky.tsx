@@ -9,7 +9,8 @@ export interface SkyTarget { slug: string; name: string; kind: string; look: str
 
 const place = (ra: number, dec: number) => ({ x: 1 - ra / 360, y: 0.5 - dec / 180 }); // 0 to 1 across and down
 
-export function TargetSky({ targets }: { targets: SkyTarget[] }) {
+/** `children`: the key, shown right under the map. */
+export function TargetSky({ targets, children }: { targets: SkyTarget[]; children?: ReactNode }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [at, setAt] = useState(0);
   useEffect(() => {
@@ -36,6 +37,7 @@ export function TargetSky({ targets }: { targets: SkyTarget[] }) {
   }, []);
   return (
     <div className="tsky">
+      <div>
       <div className="tsky__map">
         <canvas ref={canvas} aria-hidden="true" />
         <p className="tsky__axis mono" aria-hidden="true"><span>24h</span><span>right ascension</span><span>0h</span></p>
@@ -48,6 +50,8 @@ export function TargetSky({ targets }: { targets: SkyTarget[] }) {
             </button>
           );
         })}
+      </div>
+      {children}
       </div>
       <div className="tsky__cards">
         {targets.map((t, i) => (

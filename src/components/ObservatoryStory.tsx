@@ -30,7 +30,7 @@ const ACTS: Act[] = [
   { len: 1, shot: { y: -0.2, d: 2.9, turn: 4.45, tilt: 0.34 }, name: 'Support struts', fact: 'Six legs on a six-sided frame',
     note: 'The telescope has to stay near minus 190 degrees Celsius while the bus under it is warm. It stands on struts built to let almost no heat climb up them.' },
   { len: 1.1, shot: { y: -0.72, d: 4.3, turn: 4.71, tilt: 0.2 }, name: 'Spacecraft bus', fact: 'Computer, battery, reaction wheels, radios, star trackers',
-    note: 'Everything that is not the telescope. Reaction wheels and magnetic rods turn the whole observatory to aim it; nothing inside moves. Two star trackers photograph the stars and compare them with a catalogue, so it knows which way it points. The ring underneath is where it sat on the rocket.' },
+    note: 'Everything that is not the telescope. Reaction wheels and magnetic rods turn the whole observatory to aim it; nothing inside moves. Two star trackers photograph the stars and compare them with a catalogue, so it knows which way it points; every image in the viewer is aligned starting from that solution. The ring underneath is where it sat on the rocket.' },
   { len: 1, shot: { y: -0.7, d: 7.0, turn: 7.4, tilt: 0.2 }, name: 'Solar array', fact: 'One panel, 2.67 m by 1.02 m, about 750 W',
     note: 'A single fixed panel on the sunward side. The spacecraft keeps it pointed at the Sun and keeps the open end of the cones pointed away from both Sun and Earth, all the way round each orbit.' },
   { len: 1.4, shot: { y: 0.35, d: 9.2, turn: 9.6, tilt: 0.34 } },

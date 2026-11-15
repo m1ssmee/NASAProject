@@ -23,8 +23,9 @@ export default function Targets() {
         <TargetSky targets={targets.map((t) => ({
           slug: t.slug, name: t.name, kind: t.kind, look: t.look, rate: rate(t), moves: t.expect === 'moves', ra: t.ra, dec: t.dec,
           plate: <BakedPlate slug={t.slug} colour size={48} edge={false} alt={`SPHEREx plate of ${t.name}, blinking between two passes`} />,
-        }))} />
-        <p className="small muted tsky__key"><i className="is-mover" /> moves between passes <i /> changes brightness. The whole sky, laid flat. Pick a target.</p>
+        }))}>
+          <p className="small muted tsky__key"><span><i className="is-mover" /> moves between passes</span><span><i /> changes brightness</span><span>The whole sky, laid flat. Pick a target.</span></p>
+        </TargetSky>
       </section>
     </>
   );

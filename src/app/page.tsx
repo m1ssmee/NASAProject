@@ -73,35 +73,39 @@ export default async function Home() {
             <p className="lede" style={{ marginTop: '1.25rem', maxWidth: '40ch' }} data-reveal="fade">
               Clyde Tombaugh flicked between two glass plates until one dot jumped. The machine was called a blink comparator. This is one, pointed at a billion infrared sources nobody has finished looking through.
             </p>
-            <Tabs label="What a blink can show" tabs={[
-              { name: 'It moved', body: (
-                <div className="read__row">
+            {/* The three ways a blink can read, all at once: they are answers to the same question. */}
+            <div className="outcomes">
+              <div className="outcome">
+                <figure className="read__pic">
+                        <BakedPlate slug="epsilon-indi-b" view="diff" size={40} alt="Difference of two SPHEREx passes on the brown dwarf pair Epsilon Indi B: a dark spot next to a light spot, the mark of motion." />
+                        <figcaption>Epsilon Indi B, 1.1 to 1.6 µm</figcaption>
+                      </figure>
+                <div>
+                  <h3 className="h-m">It moved</h3>
                   <p className="read__text">A source that sits somewhere else on the second plate is close to us: an asteroid, a comet, a nearby star or a brown dwarf. Subtract one plate from the other and it leaves a dark spot beside a light one.</p>
-                  <figure className="read__pic">
-                    <BakedPlate slug="epsilon-indi-b" view="diff" size={40} alt="Difference of two SPHEREx passes on the brown dwarf pair Epsilon Indi B: a dark spot next to a light spot, the mark of motion." />
-                    <figcaption>Epsilon Indi B, 1.1 to 1.6 µm</figcaption>
-                  </figure>
                 </div>
-              ) },
-              { name: 'It changed', body: (
-                <div className="read__row">
+              </div>
+              <div className="outcome">
+                <figure className="read__pic">
+                        <BakedPlate slug="rw-aurigae" view="diff" size={40} alt="Difference of two SPHEREx passes on the variable star RW Aurigae: a single spot of one shade, the mark of a brightness change." />
+                        <figcaption>RW Aurigae, 1.6 to 2.4 µm</figcaption>
+                      </figure>
+                <div>
+                  <h3 className="h-m">It changed</h3>
                   <p className="read__text">Same place, different brightness. That is a variable star, a supernova or a flaring galaxy. The subtraction shows one spot of a single shade with no partner.</p>
-                  <figure className="read__pic">
-                    <BakedPlate slug="rw-aurigae" view="diff" size={40} alt="Difference of two SPHEREx passes on the variable star RW Aurigae: a single spot of one shade, the mark of a brightness change." />
-                    <figcaption>RW Aurigae, 1.6 to 2.4 µm</figcaption>
-                  </figure>
                 </div>
-              ) },
-              { name: 'It is not real', body: (
-                <div className="read__row">
+              </div>
+              <div className="outcome">
+                <figure className="read__pic">
+                        <BakedPlate slug="r-draconis" colour size={48} alt="Colour SPHEREx image of the bright star R Draconis with a grey, overflowed centre and a wide halo, blinking between two passes." />
+                        <figcaption>R Draconis, saturated core</figcaption>
+                      </figure>
+                <div>
+                  <h3 className="h-m">It is not real</h3>
                   <p className="read__text">Bright stars overflow the detector and leave grey holes, rings and spikes. Cosmic rays mark one exposure and never return. If it shows up once, or sits exactly on a bright star, leave it.</p>
-                  <figure className="read__pic">
-                    <BakedPlate slug="r-draconis" colour size={48} alt="Colour SPHEREx image of the bright star R Draconis with a grey, overflowed centre and a wide halo, blinking between two passes." />
-                    <figcaption>R Draconis, saturated core</figcaption>
-                  </figure>
                 </div>
-              ) },
-            ]} />
+              </div>
+            </div>
           </div>
         </div>
       </section>
