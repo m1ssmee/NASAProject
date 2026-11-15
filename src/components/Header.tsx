@@ -7,12 +7,6 @@ import { Hop } from './Hop';
 export function Header() {
   const path = usePathname();
   if (path.startsWith('/embed')) return null;
-  const flip = () => {
-    const h = document.documentElement;
-    const next = h.dataset.plate === 'positive' ? 'negative' : 'positive';
-    h.dataset.plate = next;
-    try { localStorage.setItem('plate', next); } catch { /* private mode */ }
-  };
   return (
     <header className="site-header">
       <Link href="/" className="wordmark" aria-label={`${site.name}, home`}>
@@ -30,9 +24,6 @@ export function Header() {
             <Hop>{n.label}</Hop>
           </Link>
         ))}
-        <button type="button" className="plate-toggle" onClick={flip} aria-label="Invert plate colours">
-          <i aria-hidden="true" /><span>Invert</span>
-        </button>
       </nav>
     </header>
   );

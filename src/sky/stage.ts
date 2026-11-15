@@ -17,13 +17,20 @@ export function buildCraftStage(renderer: THREE.WebGLRenderer): CraftStage {
   scene.add(craft);
   // Light as in orbit: one hard sun, a faint blue fill from the Earth below, and an environment
   // for the mirror-finish shield to reflect (black sky above, the Earth's glow below, the sun).
-  const sun = new THREE.DirectionalLight(0xfff4e6, 3.4);
+  const sun = new THREE.DirectionalLight(0xfff4e6, 4.2);
   sun.position.set(-4, 5, 6);
+  // Real shadows: the shields shade the bus, the array shades its side of it.
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -2.3, right: 2.3, top: 2.3, bottom: -2.3, near: 1, far: 20 });
+  sun.shadow.normalBias = 0.012;
+  renderer.shadowMap.enabled = true;
+  craft.traverse((o) => { o.castShadow = o.receiveShadow = true; });
   scene.add(sun);
-  const earthshine = new THREE.DirectionalLight(0x8fa6cc, 0.55);
+  const earthshine = new THREE.DirectionalLight(0x8fa6cc, 0.45);
   earthshine.position.set(2, -5, 1);
   scene.add(earthshine);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.08));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.05));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   const envScene = new THREE.Scene();
@@ -63,6 +70,7 @@ export function buildCraftStage(renderer: THREE.WebGLRenderer): CraftStage {
           const mat = x as THREE.MeshStandardMaterial;
           mat.map?.dispose();
           mat.bumpMap?.dispose();
+          mat.normalMap?.dispose();
           mat.dispose();
         });
       });

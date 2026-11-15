@@ -9,13 +9,10 @@ export interface FreshData { checked: string; newest: string; windowDays: number
 export function FreshStrip({ data }: { data: FreshData }) {
   if (!data.fields.length) return null;
   return (
-    <section className="fresh wrap grid" aria-labelledby="fresh-h">
-      <div className="fresh__head">
-        <h2 id="fresh-h" className="h-l">Newly photographed</h2>
-        <p className="small muted" style={{ marginTop: '0.5rem', maxWidth: '36ch' }}>
-          Of {data.sampled} positions checked across the sky on {data.checked}, these have exposures from the archive&rsquo;s latest {data.windowDays} days, up to {data.newest}. They are outlined on the map.
-        </p>
-      </div>
+    <div className="fresh">
+      <p className="muted tabs__intro">
+        Of {data.sampled} positions checked across the sky on {data.checked}, these have exposures from the archive&rsquo;s latest {data.windowDays} days, up to {data.newest}. They are outlined on the map.
+      </p>
       <ul className="fresh__list">
         {data.fields.slice(0, 16).map((f) => (
           <li key={`${f.ra},${f.dec}`}>
@@ -26,6 +23,6 @@ export function FreshStrip({ data }: { data: FreshData }) {
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { notedStars, viewerHref, type NotedStar } from '@/data/stars';
 import { startScroll, stopScroll } from '@/engine';
+import { bridge } from '@/film/bridge';
 import { formatDec, formatRa } from '@/lib/astro';
 import { chooseFigure, constellationAt, figureNear, makeAtlas, type Atlas } from '@/sky/constellations';
 import { FOV_MAX, FOV_MIN, pan, toScreen, toSky, type View } from '@/sky/project';
@@ -56,6 +57,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [full, setFullState] = useState(false);
   const fullRef = useRef(false);
+  const diving = useRef(false); // the dive in or out is playing
   const fillTween = useRef<gsap.core.Tween | null>(null);
   const glowTween = useRef<gsap.core.Tween | null>(null);
   const readout = useRef<HTMLParagraphElement>(null);
@@ -208,7 +210,6 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       }
     };
 
-    let intro: gsap.core.Timeline | null = null;
     // Phones get a lighter loop: half the frame rate and no idle drift, so page scrolling stays smooth.
     const light = matchMedia('(max-width: 767px), (pointer: coarse)').matches;
     let frame = 0, scan = 0;
@@ -218,7 +219,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       if (light && !fullscreen && !dirty.current && frame++ % 2) return;
       const v = view.current;
       // Idle: the sky turns very slowly until someone touches it.
-      if (!light && !reduced && !intro?.isActive() && !pickRef.current && time - touched.current > 4) {
+      if (!light && !reduced && !bridge.active && !pickRef.current && time - touched.current > 4) {
         v.ra = (v.ra + 0.004) % 360;
         dirty.current = true;
       }
@@ -254,7 +255,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         dirty.current = true;
         gsap.ticker.add(tick);
         setState('ready');
-        intro = playIntro(created, reduced, (full) => { fullscreen = full; measure(); });
+        joinFilm(created, reduced, (full) => { fullscreen = full; measure(); });
       } catch {
         endIntro();
         if (!dead) setState('nogl');
@@ -266,7 +267,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       ro.disconnect();
       io.disconnect();
       gsap.ticker.remove(tick);
-      intro?.kill();
+      bridge.active = false;
       // Lift the veil if the map is really gone (leaving the page), not on a development re-mount.
       setTimeout(() => { if (!document.querySelector('.sky')) endIntro(); }, 60);
       created?.dispose();
@@ -274,8 +275,46 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     };
   }, [playFigure]);
 
-  // Full screen: the screen goes black, the stars come up, and the whole window is the map.
-  const setFull = useCallback((next: boolean) => {
+  // The way into the full sky and back out: SPHEREx hangs in front of the stars, the camera goes
+  // down its telescope into the dark, and the stars come up (the last beat of the launch film,
+  // played on the clock). Backwards on the way out. Resolves false if it could not play.
+  const dive = useCallback(async (from: number, to: number, seconds: number) => {
+    const s = sky.current, el = host.current;
+    if (!s || !el || diving.current || matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    diving.current = true;
+    const box = document.createElement('div');
+    box.className = 'sky__dive';
+    box.innerHTML = '<canvas></canvas><i></i>';
+    try {
+      const [{ createFilm }, { picture }] = await Promise.all([import('@/film/scene'), import('@/film/beats')]);
+      const film = createFilm(box.firstElementChild as HTMLCanvasElement, true);
+      el.dataset.filling = '';
+      document.body.appendChild(box);
+      film.resize(innerWidth, innerHeight);
+      const t = { v: from }, dark = box.lastElementChild as HTMLElement;
+      await gsap.to(t, {
+        v: to, duration: seconds, ease: 'power1.inOut',
+        onUpdate: () => {
+          const pic = picture(t.v);
+          film.frame(pic, gsap.ticker.time);
+          s.setFill(pic.stars);
+          dark.style.opacity = String(pic.done ? 0 : pic.dark);
+          box.style.opacity = String(Math.min(1, (t.v - 0.8) / 0.025)); // SPHEREx fades in and out at the near end
+        },
+      });
+      film.dispose();
+      return true;
+    } catch {
+      return false; // no WebGL or a failed load: the plain fill below
+    } finally {
+      box.remove();
+      delete el.dataset.filling;
+      diving.current = false;
+    }
+  }, []);
+
+  // Full screen: SPHEREx takes you in, and the whole window is the map.
+  const applyFull = useCallback((next: boolean) => {
     if (fullRef.current === next) return;
     fullRef.current = next;
     setFullState(next);
@@ -315,13 +354,17 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
       // Ask the browser for real full screen too; where that is refused the map still fills the window.
       html.requestFullscreen?.().catch(() => {});
       if (s && el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        const f = { v: 0 };
-        s.setFill(0);
-        el.dataset.filling = '';
-        fillTween.current = gsap.to(f, {
-          v: 1, duration: 1.8, delay: 0.5, ease: 'power2.in',
-          onUpdate: () => s.setFill(f.v),
-          onComplete: () => { delete el.dataset.filling; },
+        dive(0.8, 1, 3.4).then((played) => {
+          if (played || !fullRef.current) return s.setFill(1);
+          // The old way in, if the dive could not play: black, then the stars come up.
+          const f = { v: 0 };
+          s.setFill(0);
+          el.dataset.filling = '';
+          fillTween.current = gsap.to(f, {
+            v: 1, duration: 1.8, delay: 0.5, ease: 'power2.in',
+            onUpdate: () => s.setFill(f.v),
+            onComplete: () => { delete el.dataset.filling; },
+          });
         });
       }
     } else {
@@ -341,7 +384,12 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     }
     touched.current = gsap.ticker.time;
     dirty.current = true;
-  }, [setPick]);
+  }, [setPick, dive]);
+  const setFull = useCallback((next: boolean) => {
+    if (fullRef.current === next || diving.current) return;
+    if (next) applyFull(true);
+    else dive(1, 0.8, 1.5).then(() => applyFull(false)); // out the way we came in, then leave
+  }, [applyFull, dive]);
   useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && fullRef.current && !pickRef.current) setFull(false); };
@@ -578,71 +626,24 @@ function endIntro() {
 }
 
 /**
- * The opening, in the owner's order:
- *   1. the page is dark and two or three stars twinkle;
- *   2. the sky fills with stars, brightest first, across the whole window;
- *   3. SPHEREx appears and travels slowly to the logo;
- *   4. the site appears.
- * The star field is the real map drawn full-window at the map's own scale, so nothing jumps
- * when the site fades in around it. Plays when the home page is loaded directly; any click,
- * key, scroll or touch skips it; never under reduced motion.
+ * The opening belongs to the launch film (LaunchFilm.tsx). The map's part: fill the whole window,
+ * projected at the map's own scale so nothing jumps afterwards, show as many stars as the film
+ * asks for, and at the end let the site fade in around them. Never under reduced motion.
  */
-function playIntro(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => void): gsap.core.Timeline | null {
+function joinFilm(sky: Sky, reduced: boolean, setFullscreen: (on: boolean) => void) {
   const html = document.documentElement;
-  if (reduced || !html.classList.contains('intro-pending')) { endIntro(); return null; }
-  const { craft, craftCamera } = sky;
+  if (reduced || !html.classList.contains('intro-pending')) { endIntro(); return; }
   setFullscreen(true);
   sky.setFill(0);
-
-  // Screen position (-1..1) to a point in front of the craft camera at a given depth.
-  const at = (nx: number, ny: number, depth: number) => {
-    const halfH = Math.tan((craftCamera.fov * Math.PI) / 360) * depth;
-    return { x: nx * halfH * (innerWidth / innerHeight), y: ny * halfH, z: -depth };
-  };
-  const mark = document.querySelector<HTMLElement>('.wordmark__craft')?.getBoundingClientRect();
-  // The flight is tweened in screen terms (where on screen, how far away) and converted each
-  // frame, so the craft crosses the window at an even, slow pace however deep it is.
-  const path = { nx: 0.3 + Math.random() * 0.2, ny: -0.3 + Math.random() * 0.2, depth: 9.5 };
-  const endN = {
-    nx: mark ? ((mark.left + mark.width / 2) / innerWidth) * 2 - 1 : -0.94,
-    ny: mark ? 1 - ((mark.top + mark.height / 2) / innerHeight) * 2 : 0.94,
-  };
-  const fly = () => { const p = at(path.nx, path.ny, path.depth); craft.position.set(p.x, p.y, p.z); };
-  fly();
-  craft.scale.setScalar(0.001);
-  const spin = { x: craft.rotation.x, y: craft.rotation.y, z: craft.rotation.z };
-  const fill = { f: 0 };
-
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    off();
-    sky.showCraft(false);
-    craft.scale.setScalar(1);
-    craft.rotation.set(spin.x, spin.y, spin.z);
+  bridge.active = true;
+  bridge.setStars = (fill) => sky.setFill(fill);
+  bridge.finish = () => {
+    if (!bridge.active) return;
+    bridge.active = false;
     sky.setFill(1);
     html.classList.add('intro-fill');
     html.classList.remove('intro-veil'); // the site fades in beneath the stars
     // When the fade is done, hand the canvas back to the map's box. The stars do not move.
     setTimeout(() => { html.classList.remove('intro-pending', 'intro-fill'); setFullscreen(false); }, 950);
   };
-  const tl = gsap.timeline({ onComplete: finish })
-    .to({}, { duration: 1.0 }) // 1. dark, a few stars twinkling
-    .call(() => html.classList.add('intro-fill')) // the placeholder stars give way to the real ones
-    .to(fill, { f: 1, duration: 2.0, ease: 'power2.in', onUpdate: () => sky.setFill(fill.f) }) // 2. the sky fills
-    .call(() => sky.showCraft(true), undefined, '-=0.35') // 3. the spacecraft, slowly, to the logo
-    .to(craft.scale, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'power2.out' }, '<')
-    .to(path, { nx: endN.nx, duration: 3.4, ease: 'sine.inOut', onUpdate: fly }, '<0.3')
-    .to(path, { ny: endN.ny, duration: 3.4, ease: 'power1.inOut' }, '<')
-    .to(path, { depth: 150, duration: 3.4, ease: 'power3.in' }, '<')
-    // Turn away from the solar array, so the shields, bus and star trackers stay in view.
-    .to(craft.rotation, { y: spin.y - 1.0, z: spin.z + 0.2, x: spin.x - 0.08, duration: 3.4, ease: 'sine.inOut' }, '<');
-  const skip = () => { tl.kill(); finish(); };
-  const off = () => { removeEventListener('pointerdown', skip); removeEventListener('keydown', skip); removeEventListener('wheel', skip); removeEventListener('touchstart', skip); };
-  addEventListener('pointerdown', skip, { once: true });
-  addEventListener('keydown', skip, { once: true });
-  addEventListener('wheel', skip, { once: true, passive: true });
-  addEventListener('touchstart', skip, { once: true, passive: true });
-  return tl;
 }

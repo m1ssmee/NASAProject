@@ -1,8 +1,7 @@
 // The sky renderer: the bright star catalogue as one point cloud, projected in the vertex
-// shader with the same stereographic maths as project.ts, plus the spacecraft for the intro.
+// shader with the same stereographic maths as project.ts.
 import * as THREE from 'three';
 import { basis, radecToVec, scaleOf, separation, type View } from './project';
-import { buildCraftStage } from './stage';
 
 export interface NotedInput { ra: number; dec: number; pulse?: number }
 
@@ -178,9 +177,6 @@ export interface Sky {
   loadMilkyWay(url: string): void;
   /** 0 to 1: the Milky Way's brightness and the strength of the star colours. */
   setGlow(a: number): void;
-  craft: THREE.Group;
-  craftCamera: THREE.PerspectiveCamera;
-  showCraft(on: boolean): void;
   render(time: number): void;
   dispose(): void;
 }
@@ -287,21 +283,14 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
   };
   const flat = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  const stage = buildCraftStage(renderer);
-  const { scene: craftScene, camera: craftCamera, craft } = stage;
-  craft.visible = false;
 
   let w = 0, h = 0;
   return {
     noted,
-    craft,
-    craftCamera,
     setView(v) {
       if (v.width !== w || v.height !== h) {
         w = v.width; h = v.height;
         renderer.setSize(w, h, false);
-        craftCamera.aspect = w / h;
-        craftCamera.updateProjectionMatrix();
       }
       const [r, nn, f] = basis(v.ra, v.dec);
       // Matrix3.set takes rows, so M * p gives (p.right, p.north, p.front).
@@ -376,15 +365,10 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
       }, undefined, () => { glowAsked = false; });
     },
     setGlow(a) { glow = a; applyGlow(); },
-    showCraft(on) { craft.visible = on; },
     render(time) {
       uniforms.uTime.value = time;
       renderer.clear();
       renderer.render(starScene, flat);
-      if (craft.visible) {
-        renderer.clearDepth();
-        renderer.render(craftScene, craftCamera);
-      }
     },
     dispose() {
       geometry.dispose();
@@ -394,7 +378,6 @@ export function createSky(canvas: HTMLCanvasElement, catalogue: Float32Array, no
       glowUniforms.uMap.value?.dispose();
       glowMesh.geometry.dispose();
       glowMaterial.dispose();
-      stage.dispose();
       renderer.dispose();
     },
   };

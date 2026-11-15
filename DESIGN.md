@@ -236,3 +236,44 @@ URL parameter `rgb=1`; key C.
 - **Colour.** The ground goes deep blue-black; the stars' temperature tint is strengthened in full
   screen; the Milky Way keeps its own colour with the saturation raised. Nothing is painted in.
 - The home page map stays plain: it sits under the headline.
+
+## Revision 13: the launch film
+
+Requested by the owner. The Revision 3 opening (stars fill, the spacecraft flies to the logo) is
+replaced by a scroll-driven film: a Falcon 9 climbs across the window at dusk, drops its booster,
+opens its nose and releases SPHEREx; the camera goes down the telescope into the dark, the stars
+come up brightest first, and the site fades in on "Something up here moved." Details, timing and
+the list of files are in `LAUNCH.md`.
+
+- It departs from "No loader, no WebGL" and from the 2.6 s opening the skill recommends, at the
+  owner's request. Skip (or Escape) ends it at once; it never plays under reduced motion, and a
+  failed load goes straight to the site.
+- The stars in the film are the real sky map underneath, so nothing moves at the hand-over.
+- The vehicle and SPHEREx are built in code from photographs and the launch footage, at real
+  proportions, with no markings. SPHEREx is now matte white outside, as it flew; the model on the
+  observatory page is the same one, now with real shadows.
+- The look is a camera's, not a renderer's: haze, shimmer, soft focus, sensor noise, exposure.
+
+## Revision 14: in the stars (in progress)
+
+Requested by the owner: the site felt boxy and busy, and the type too familiar.
+
+- **One sky behind every page.** `StarBackdrop` draws the map's own star catalogue on a plain
+  canvas fixed behind the content. Sections have no backgrounds.
+- **No rules, soft corners.** The lines between rows and sections are gone; rows are set apart by
+  space. Plates, pictures and panels have a 12 px corner; buttons and inputs are pills. Control
+  outlines use `--c-edge` (32% ink), not full ink. This replaces "Radius 0 everywhere".
+- **Invert is gone from the header.** Plates are light-on-dark by default so they sit in the sky.
+- **Home is five chapters, one window each:** the sky; how to read a blink; where to start; the
+  observatory; from NASA. Nothing was cut: what used to be stacked sections is now tabs inside a
+  chapter (`Tabs`, every panel stays in the page, hidden not removed).
+- **Pull-apart SPHEREx.** The model is built from named parts; "Pull it apart" on the model
+  separates them along the axis with a name beside each (`CraftView`, `APART`).
+- **Into the full-screen map through SPHEREx.** The black screen is replaced by the launch
+  film's last beat with no rocket: SPHEREx in front of the stars, down its telescope, stars up
+  (`dive` in `SkyMap.tsx`). Leaving plays it backwards. Without WebGL the old fill still runs.
+- **Viewer.** Position, detector and grouping stay open; stacking, display, plate details,
+  light curve, flags, spectrum and share are `<details>` groups, closed until wanted.
+- **Chapters settle.** On desktop the home page nudges to the top of a chapter when the scroll
+  rests near one (`ChapterSnap`, Lenis's snap add-on, proximity only).
+- Still to do: the new typeface (samples at `/type`, a temporary page; the owner has not chosen).

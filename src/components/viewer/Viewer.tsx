@@ -570,8 +570,8 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
           <label className="check"><input type="checkbox" checked={ends} disabled={stack !== 'none'} onChange={(e) => setEnds(e.target.checked)} />Blink only first and last</label>
         </section>
 
-        <section className="panel" aria-label="Stacking">
-          <h2 className="panel__h">Add exposures together</h2>
+        <details className="panel">
+          <summary className="panel__h">Add exposures together</summary>
           <div className="seg" role="group" aria-label="Stacking">
             <button type="button" aria-pressed={stack === 'none'} disabled={colour} onClick={() => { setStack('none'); setIdx(0); }}>Off</button>
             <button type="button" aria-pressed={stack === 'sum'} disabled={colour} onClick={() => { setStack('sum'); setIdx(0); }}>Add all</button>
@@ -594,10 +594,10 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
               {!gaia && <p className="note">Tick the Gaia overlay below to pick up a known star&rsquo;s motion.</p>}
             </>
           )}
-        </section>
+        </details>
 
-        <section className="panel" aria-label="Display">
-          <h2 className="panel__h">Display</h2>
+        <details className="panel">
+          <summary className="panel__h">Display</summary>
           <div className="seg" role="group" aria-label="Field of view">
             {FOVS.map((f) => <button key={f.v} type="button" aria-pressed={fov === f.v} onClick={() => setFov(f.v)} aria-label={`Field of view ${f.l.replace('′', ' arcminutes')}`}>{f.l}</button>)}
           </div>
@@ -613,7 +613,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
           <label className="check"><input type="checkbox" checked={showWise} onChange={(e) => setShowWise(e.target.checked)} />WISE sources, where they were in 2010</label>
           {showWise && wise && <p className="note">{wiseMarks.length} squares from the AllWISE catalogue. A source that has left its square since 2010 has moved.</p>}
           {wiseErr && <p className="note note--warn">{wiseErr}</p>}
-        </section>
+        </details>
 
         {mark && markSky && (
           <section className="panel" aria-label="Marked position">
@@ -631,8 +631,8 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
         )}
 
         {epoch && (
-          <section className="panel" aria-label="This plate">
-            <h2 className="panel__h">This plate</h2>
+          <details className="panel">
+            <summary className="panel__h">This plate</summary>
             <dl className="meta">
               <dt>Dates</dt><dd>{label}</dd>
               <dt>MJD</dt><dd>{epoch.mjd.toFixed(3)}</dd>
@@ -644,21 +644,21 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
               <dt>First exposure</dt><dd><a className="inline-link" target="_blank" rel="noopener noreferrer" href={`https://irsa.ipac.caltech.edu/ibe/data/spherex/${epoch.frames[0].rec.key}`}>{epoch.frames[0].rec.id}</a></dd>
             </dl>
             <p className="note">Grey pixels have no data: a star that overflowed the detector, or a masked pixel.</p>
-          </section>
+          </details>
         )}
 
         {frames.length > 0 && (
-          <section className="panel" aria-label="Brightness over time">
-            <h2 className="panel__h">Brightness over time {mark ? 'at your mark' : 'at the centre'}</h2>
+          <details className="panel">
+            <summary className="panel__h">Brightness over time {mark ? 'at your mark' : 'at the centre'}</summary>
             <LightCurve points={curve.points} means={curve.means} coloured={colour} />
             {curve.halo && <p className="note note--warn">This star overflows the detector, so its core cannot be measured. The chart follows the light in its halo instead: a fair guide to brightening and fading, but not a calibrated flux.</p>}
             <p className="note">Dots are single exposures, squares the median of each {colour ? 'pass and detector' : 'plate'}. A variable star steps up and down between plates; a steady one stays level. Something that moves away from this spot fades out.</p>
-          </section>
+          </details>
         )}
 
         {epoch && (
-          <section className="panel" aria-label="Contamination flags">
-            <h2 className="panel__h">Archive flags {mark ? 'at your mark' : 'at the centre'}</h2>
+          <details className="panel">
+            <summary className="panel__h">Archive flags {mark ? 'at your mark' : 'at the centre'}</summary>
             {flagsHere && flagsHere.done < flagsHere.total && <p className="note" aria-live="polite">Reading {flagsHere.done} of {flagsHere.total} exposures</p>}
             {flagsHere && flagsHere.done === flagsHere.total && (flagsHere.rows.length ? (
               <ul className="flags">
@@ -671,19 +671,19 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
             ) : <p className="note">No flags set at this pixel in any of the {flagsHere.total} exposures.</p>)}
             <button type="button" className="btn btn--quiet" onClick={checkFlags}><Hop tick={false}>{flagsHere ? 'Check again' : 'Check this plate\u2019s flags here'}</Hop></button>
             <p className="note">Read from the archive&rsquo;s own flag layer for the exposures in the plate on screen. Flags in red mean the pixel is suspect in that exposure.</p>
-          </section>
+          </details>
         )}
 
-        <section className="panel" aria-label="Spectrum">
-          <h2 className="panel__h">Spectrum {mark ? 'at your mark' : 'at the centre'}</h2>
+        <details className="panel">
+          <summary className="panel__h">Spectrum {mark ? 'at your mark' : 'at the centre'}</summary>
           {spec && <Spectrum points={spec.points} />}
           {spec && spec.done < spec.total && <p className="note" aria-live="polite">Measuring {spec.done} of {spec.total} exposures</p>}
           {spec && spec.done === spec.total && <p className="note">{spec.points.length} measurements. Filled points are the latest pass, open points the first. Simple aperture photometry, good for shape only.</p>}
           <button type="button" className="btn btn--quiet" onClick={measure} disabled={!records}><Hop tick={false}>{spec ? 'Measure again' : 'Measure across all 102 bands'}</Hop></button>
-        </section>
+        </details>
 
-        <section className="panel" aria-label="Share">
-          <h2 className="panel__h">Share</h2>
+        <details className="panel">
+          <summary className="panel__h">Share</summary>
           <div className="links">
             <button type="button" className="inline-link" onClick={() => copy('link')}>{copied === 'link' ? 'Link copied' : 'Copy link'}</button>
             <button type="button" className="inline-link" onClick={() => copy('embed')}>{copied === 'embed' ? 'Embed code copied' : 'Copy embed code'}</button>
@@ -691,7 +691,7 @@ export function Viewer({ initial, embed = false }: { initial: ViewParams; embed?
             <button type="button" className="inline-link" onClick={saveGif} disabled={!epoch || exporting}>{exporting ? 'Making the GIF' : 'Save the blink as a GIF'}</button>
           </div>
           <p className="note">Keys: space plays, arrows step, 1 to 6 pick a detector, C colour, D subtracts.</p>
-        </section>
+        </details>
       </div>
       <ReportDialog
         open={report === 'open' && !!markSky}

@@ -44,3 +44,6 @@ next-env.d.ts
 
 # local QA output
 .playwright-mcp/
+
+# safety net: agent folder scopes may drop the leading dot
+/shots/

@@ -43,6 +43,8 @@ export const onScroll = (fn: (s: ScrollState) => void) => {
   return () => listeners.delete(fn);
 };
 export const scrollState = () => state;
+/** The smooth scroller, if there is one (none under reduced motion). */
+export const getLenis = () => lenis;
 export const stopScroll = () => lenis?.stop();
 export const startScroll = () => lenis?.start();
 export function resetScroll() {
