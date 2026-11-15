@@ -68,6 +68,12 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const atlasRef = useRef<Atlas | null>(null);
   const [atlas, setAtlas] = useState<Atlas | null>(null);
   const [linesOn, setLinesOn] = useState(false);
+  // SPHEREx itself, live, in the full-screen sky.
+  const satEl = useRef<HTMLButtonElement>(null);
+  const satLabel = useRef<HTMLSpanElement>(null);
+  const following = useRef(false); // the view is riding along with it
+  const [satImg, setSatImg] = useState<string | null>(null);
+  const askedImg = useRef(false);
   const [found, setFound] = useState(0);
   const lineState = useRef({ active: -1, draw: 0, alpha: 0, all: 0 });
   const seen = useRef(new Set<number>());
@@ -194,6 +200,10 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         if (on) {
           k.style.translate = `${p!.x}px ${p!.y}px`;
           if (k.dataset.field) k.style.setProperty('--side', `${(FIELD_DEG / v.fov) * Math.min(v.width, v.height)}px`);
+          if (k.dataset.sat) { // a ring from far off; the spacecraft itself, growing, as you zoom in
+            k.style.setProperty('--size', `${Math.round((Math.min(v.width, v.height) * 5) / v.fov)}px`);
+            k.style.setProperty('--near', String(Math.min(1, Math.max(0, (62 - v.fov) / 30))));
+          }
         }
       }
       const c = card.current, pk = pickRef.current;
@@ -412,6 +422,57 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
     };
   }, [setFull]);
 
+  // While full screen is open: fetch SPHEREx's orbit once, then work out where it is every second
+  // and put its marker there. The picture of it is rendered once, after the way in has finished.
+  useEffect(() => {
+    if (!full) return;
+    let dead = false, timer = 0;
+    (async () => {
+      try {
+        const [{ tracker }, tle] = await Promise.all([import('@/sky/orbit'), fetch('/api/orbit').then((r) => r.json())]);
+        if (dead) return;
+        const where = tracker(tle.line1, tle.line2);
+        const tick = () => {
+          const f = where(new Date()), el = satEl.current;
+          if (!f || !el) return;
+          el.dataset.ra = String(f.ra);
+          el.dataset.dec = String(f.dec);
+          el.hidden = false;
+          if (satLabel.current) satLabel.current.textContent = `SPHEREx · ${Math.round(f.altitude)} km up · ${f.speed.toFixed(1)} km/s${tle.stale ? ' · orbit data may be days old' : ''}`;
+          if (following.current) { view.current.ra = f.ra; view.current.dec = f.dec; }
+          dirty.current = true;
+        };
+        tick();
+        timer = window.setInterval(tick, 1000);
+      } catch { /* no orbit, no marker: the map works without it */ }
+    })();
+    const later = window.setTimeout(() => {
+      if (!askedImg.current) { askedImg.current = true; import('@/sky/portrait').then((m) => m.craftPortrait()).then(setSatImg).catch(() => { askedImg.current = false; }); }
+    }, 3400);
+    return () => { dead = true; following.current = false; clearInterval(timer); clearTimeout(later); };
+  }, [full]);
+
+  // Turn to SPHEREx, close in on it, and ride along until the sky is next dragged.
+  const findSat = () => {
+    const v = view.current, el = satEl.current;
+    if (!el || el.hidden) return;
+    setPick(null);
+    following.current = false;
+    const from = { ra: v.ra, dec: v.dec, fov: v.fov }, t = { k: 0 };
+    gsap.to(t, {
+      k: 1, duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1.8, ease: 'power2.inOut', overwrite: true,
+      onUpdate: () => { // aim at where it is now, not where it was when the move began
+        const ra = Number(el.dataset.ra), dec = Number(el.dataset.dec), dra = ((ra - from.ra + 540) % 360) - 180;
+        v.ra = (from.ra + dra * t.k + 360) % 360;
+        v.dec = from.dec + (dec - from.dec) * t.k;
+        v.fov = from.fov + (16 - from.fov) * t.k;
+        dirty.current = true;
+        touched.current = gsap.ticker.time;
+      },
+      onComplete: () => { following.current = true; },
+    });
+  };
+
   // Turn the sky, by the short way round, until the centre of the Milky Way is in the middle.
   const GALACTIC_CENTRE = { ra: 266.42, dec: -28.94, fov: 78 };
   const centreMilkyWay = () => {
@@ -443,6 +504,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
   const onDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     drag.current = { x: e.clientX, y: e.clientY, moved: 0, id: e.pointerId };
+    following.current = false;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     touched.current = gsap.ticker.time;
   };
@@ -562,6 +624,14 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
           <span key={`${f.ra},${f.dec}`} className="sky__field" data-field data-ra={f.ra} data-dec={f.dec} aria-hidden="true" />
         ))}
         {pick?.kind === 'point' && <span className="sky__mark" data-ra={pick.ra} data-dec={pick.dec} aria-hidden="true" />}
+        {full && (
+          <button ref={satEl} type="button" hidden data-sat data-ra="0" data-dec="0" className="sky__sat" onClick={findSat} aria-label="SPHEREx, where it is right now. Go to it.">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {satImg && <img src={satImg} alt="" />}
+            <i aria-hidden="true" />
+            <span className="sky__satlabel"><span ref={satLabel}>SPHEREx</span><em>Drawn far larger than life: from here it would be much smaller than a pixel.</em></span>
+          </button>
+        )}
       </div>
 
       {at && pick && (
@@ -608,6 +678,7 @@ export function SkyMap({ fresh = [] }: { fresh?: FreshField[] }) {
         <button type="button" onClick={() => nudge(0, 1)} aria-label="Turn north">&uarr;</button>
         <button type="button" onClick={() => nudge(0, -1)} aria-label="Turn south">&darr;</button>
         {full && <button type="button" className="sky__linesbtn" onClick={centreMilkyWay} aria-label="Centre the Milky Way">Milky Way</button>}
+        {full && <button type="button" className="sky__linesbtn" onClick={findSat} aria-label="Go to SPHEREx, where it is right now">SPHEREx</button>}
         {full && atlas && (
           <button type="button" className="sky__linesbtn" onClick={toggleLines} aria-pressed={linesOn} aria-label={linesOn ? 'Hide the constellation lines' : 'Show all constellation lines'}>Lines</button>
         )}

@@ -48,6 +48,7 @@ const CREDITS: [string, ReactNode][] = [
   ['Milky Way', 'The star-free layer of the Deep Star Maps 2020 from NASA’s Scientific Visualization Studio, built from Gaia data. Its colours, and the stars’ temperature colours, are strengthened so they can be seen, not invented.'],
   ['Star notes', 'Written for this site from standard references.'],
   ['Spacecraft model', <>The SPHEREx in the opening film and on the <a href="/craft">observatory page</a> is a model built for this site from NASA/JPL-Caltech photographs and illustrations. NASA has not released a 3D model of it.</>],
+  ['SPHEREx’s position', <>In the full-screen map, worked out in your browser every second from the orbit elements published by {out('https://celestrak.org/', 'CelesTrak')} (catalogue number 63182), which are refreshed about daily. It is shown as seen from the centre of the Earth, and drawn far larger than life.</>],
   ['Newly photographed', 'Rebuilt once a day by checking 96 positions spread evenly over the sky, so it is a sample of where SPHEREx has been looking, not a complete record.'],
   ['Interface', <>Follows {out('http://byw.tools/wiseview', 'WiseView')}, built by the Backyard Worlds team for the WISE mission.</>],
   ['Older images', <>For older optical images of the same fields, the Canadian Space Agency’s NEOSSat archive is searchable by position at the {out('https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/en/', 'Canadian Astronomy Data Centre')}.</>],

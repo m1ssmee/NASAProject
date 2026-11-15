@@ -1095,3 +1095,15 @@ html.sky-return .sky__tools { animation: sky-fade 1.8s ease 0.4s both; }
    the way out it lifts back to the page's colour while the sky glides home, instead of snapping. */
 .sky { transition: background-color 2.6s ease-in-out; }
 html.sky-leaving .sky { background-color: var(--emulsion); }
+
+/* SPHEREx, live, in the full-screen sky: a pulsing ring from far off; as you zoom in, the
+   spacecraft itself fades up and grows, with its height and speed beside it. */
+.sky__sat { width: 0; height: 0; pointer-events: auto; --size: 40px; --near: 0; }
+.sky__sat i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border: 1.5px solid var(--c-mark); border-radius: 50%; opacity: calc(1 - var(--near)); animation: sat-ping 2.4s ease-out infinite; }
+.sky__sat i::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--glass); }
+@keyframes sat-ping { 0% { box-shadow: 0 0 0 0 rgb(216 50 28 / 0.55); } 100% { box-shadow: 0 0 0 16px rgb(216 50 28 / 0); } }
+.sky__sat img { position: absolute; left: calc(var(--size) / -2); top: calc(var(--size) / -2); width: var(--size); height: var(--size); max-width: none; opacity: var(--near); pointer-events: none; filter: drop-shadow(0 0 18px rgb(0 0 0 / 0.6)); }
+.sky__satlabel { position: absolute; left: calc(14px + var(--size) * 0.34 * var(--near)); top: -0.6em; display: grid; gap: 0.3rem; white-space: nowrap; text-align: left; font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: 0.06em; color: var(--glass); text-shadow: 0 0 6px #000, 0 0 2px #000; }
+.sky__satlabel em { font-style: normal; letter-spacing: 0; color: var(--c-muted); opacity: var(--near); white-space: normal; width: 22rem; max-width: 60vw; }
+.sky__sat:hover .sky__satlabel > span, .sky__sat:focus-visible .sky__satlabel > span { color: var(--c-accent); }
+@media (prefers-reduced-motion: reduce) { .sky__sat i { animation: none; } }
